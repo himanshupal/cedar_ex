@@ -3,15 +3,21 @@ defmodule CedarPolicyTest do
   doctest CedarPolicy
 
   test "greets the world" do
-    ctx0 = CedarPolicy.new()
+    dbg(CedarPolicy.get_lang_version())
+    dbg(CedarPolicy.get_sdk_version())
 
-    assert CedarPolicy.increment(ctx0) == 1
-    assert CedarPolicy.increment(ctx0) == 2
-    assert CedarPolicy.increment(ctx0) == 3
+    # Policy init
 
-    ctx1 = CedarPolicy.new()
+    p1 =
+      CedarPolicy.new("""
+      permit(
+      principal == User::"bob",
+      action == Action::"view",
+      resource == Album::"trip"
+      )
+      when { principal.age > 18 };
+      """)
 
-    assert CedarPolicy.increment(ctx1) == 1
-    assert CedarPolicy.increment(ctx0) == 4
+    dbg(CedarPolicy.get_policy_as_json(p1))
   end
 end

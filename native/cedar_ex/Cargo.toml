@@ -1,0 +1,12 @@
+[package]
+name = "cedar_ex"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cedar-policy = "4.9.0"
+rustler = { version = "0.37.2", features = ["nif_version_2_17"] }
+semver = "1.0.27"
