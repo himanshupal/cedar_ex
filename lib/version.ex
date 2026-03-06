@@ -1,5 +1,5 @@
-defmodule CedarPolicy.Native.Version do
+defmodule CedarPolicy.Version do
   defstruct [:major, :minor, :patch]
 
-  @type t() :: %CedarPolicy.Native.Version{major: integer(), minor: integer(), patch: integer()}
+  @type t() :: %CedarPolicy.Version{major: integer(), minor: integer(), patch: integer()}
 end

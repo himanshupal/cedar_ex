@@ -1,4 +1,5 @@
 defmodule CedarPolicy do
+  alias CedarPolicy.EntityUid
   alias CedarPolicy.Native
 
   @moduledoc """
@@ -9,12 +10,17 @@ defmodule CedarPolicy do
     Native.new_context(policy)
   end
 
-  @spec get_lang_version() :: CedarPolicy.Native.Version.t()
+  @spec get_lang_version() :: CedarPolicy.Version.t()
   def get_lang_version(), do: Native.get_lang_version()
 
+  @spec get_sdk_version() :: CedarPolicy.Version.t()
   def get_sdk_version(), do: Native.get_sdk_version()
 
-  def create_entity_uid(entity_name, id), do: Native.create_entity_uid(entity_name, id)
+  @spec create_request(
+          principal :: EntityUid.t(),
+          action :: EntityUid.t(),
+          resource :: EntityUid.t()
+        ) :: nil
   def create_request(p, a, r), do: Native.create_request(p, a, r)
 
   def get_policy_as_json(context), do: Native.get_policy_as_json(context)

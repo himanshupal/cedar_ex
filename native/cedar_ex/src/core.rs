@@ -2,7 +2,7 @@ use cedar_policy;
 use rustler::{NifStruct, nif};
 
 #[derive(NifStruct)]
-#[module = "CedarPolicy.Native.Version"]
+#[module = "CedarPolicy.Version"]
 struct Version {
     major: u64,
     minor: u64,
