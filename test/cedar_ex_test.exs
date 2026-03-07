@@ -21,10 +21,36 @@ defmodule CedarPolicyTest do
 
     CedarPolicy.get_policy_as_json(p1)
 
-    p = EntityUid.new(EntityTypeName.new("User", "Admin"), "123")
-    a = EntityUid.new(EntityTypeName.new("View", "Access"), "456")
-    r = EntityUid.new(EntityTypeName.new("Photo", "Travel"), "789")
+    p = EntityUid.new(EntityTypeName.new("User"), "alice")
+    a = EntityUid.new(EntityTypeName.new("Action"), "view")
+    r = EntityUid.new(EntityTypeName.new("Album"), "trip")
 
-    CedarPolicy.create_request(p, a, r)
+    c = [
+      {"long", {:long, 123_456}},
+      {"boolean", {:bool, true}},
+      {"ip", {:ip, "127.0.0.1"}},
+      {"string", {:string, "text"}},
+      {"decimal", {:decimal, "1.23"}},
+      {"datetime", {:date_time, "2015-01-13T13:00:07.001Z"}},
+      {"duration", {:duration, "24h"}},
+      {"entityUid", {:entity_uid, p}},
+      {"set", {:set, [{:long, 123}, {:string, "text"}]}},
+      {"record", {:record, [{"llong", {:ip, "192.168.1.1"}}, {"sstring", {:string, "text"}}]}}
+    ]
+
+    s = """
+        entity User;
+        entity Album;
+        action view appliesTo {
+            principal : User,
+            resource : Album,
+            context : {
+              "boolean": Bool,
+              "string": String
+            }
+        };
+    """
+
+    CedarPolicy.create_request(p, a, r, c, s)
   end
 end
