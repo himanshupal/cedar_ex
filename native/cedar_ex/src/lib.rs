@@ -1,5 +1,3 @@
-use rustler;
-
 mod atoms;
 mod core;
 mod ctx;

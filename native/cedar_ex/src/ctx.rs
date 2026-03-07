@@ -1,19 +1,21 @@
 use cedar_policy::{
-    Context as CedarContext, EntityId, EntityTypeName, EntityUid, Policy, Request,
-    RequestValidationError, RestrictedExpression, Schema,
+    Authorizer, Context, Entities, Entity, EntityId, EntityTypeName, EntityUid, Policy, PolicyId,
+    PolicySet, Request, RequestValidationError, RestrictedExpression, Schema, ValidationMode,
+    Validator, entities_errors::EntitiesError,
 };
-use rustler::{
-    Encoder, Env, Error, NifResult, NifStruct, NifTaggedEnum, Resource, ResourceArc, Term, nif,
-};
-use std::{str::FromStr, sync::Mutex};
+use rustler::{Env, Error, NifResult, NifStruct, NifTaggedEnum, Resource, ResourceArc, Term, nif};
+use std::{str::FromStr, sync::RwLock};
 
 use crate::atoms;
 
-pub struct Context {
-    pub policy: Mutex<Policy>,
+type RecordItems = Vec<(String, ExRestrictedExpression)>;
+
+pub struct State {
+    pub entities: RwLock<Entities>,
+    pub policies: RwLock<PolicySet>,
 }
 
-impl Resource for Context {
+impl Resource for State {
     const IMPLEMENTS_DESTRUCTOR: bool = true;
 
     fn destructor(self, _: Env<'_>) {
@@ -22,27 +24,36 @@ impl Resource for Context {
 }
 
 pub fn on_load(env: Env, _: Term) -> bool {
-    env.register::<Context>().is_ok()
+    env.register::<State>().is_ok()
 }
 
-#[derive(NifStruct)]
+#[derive(NifStruct, Debug)]
 #[module = "CedarPolicy.EntityUid"]
-struct ExEntityUid<'a> {
-    type_name: &'a str,
-    id: &'a str,
+struct ExEntityUid {
+    type_name: String,
+    id: String,
 }
 
-impl<'a> ExEntityUid<'a> {
+impl ExEntityUid {
     fn to_entity_uid(self) -> EntityUid {
         EntityUid::from_type_name_and_id(
-            EntityTypeName::from_str(self.type_name).unwrap(),
-            EntityId::from_str(self.id).unwrap(),
+            EntityTypeName::from_str(&self.type_name).unwrap(),
+            EntityId::from_str(&self.id).unwrap(),
         )
     }
 }
 
-#[derive(NifTaggedEnum)]
-enum ExRestrictedExpression<'a> {
+#[derive(NifStruct, Debug)]
+#[module = "CedarPolicy.Entity"]
+struct ExEntity {
+    id: ExEntityUid,
+    tags: RecordItems,
+    attrs: RecordItems,
+    parents: Vec<ExEntityUid>,
+}
+
+#[derive(NifTaggedEnum, Debug)]
+enum ExRestrictedExpression {
     Long(i64),
     Bool(bool),
     Ip(String),
@@ -50,12 +61,12 @@ enum ExRestrictedExpression<'a> {
     Decimal(String),
     DateTime(String),
     Duration(String),
-    EntityUid(ExEntityUid<'a>),
-    Set(Vec<ExRestrictedExpression<'a>>),
-    Record(Vec<(String, ExRestrictedExpression<'a>)>),
+    Record(RecordItems),
+    EntityUid(ExEntityUid),
+    Set(Vec<ExRestrictedExpression>),
 }
 
-impl<'a> ExRestrictedExpression<'a> {
+impl ExRestrictedExpression {
     fn to_restricted_expression(self) -> RestrictedExpression {
         match self {
             ExRestrictedExpression::Ip(value) => RestrictedExpression::new_ip(value),
@@ -82,37 +93,100 @@ impl<'a> ExRestrictedExpression<'a> {
 }
 
 #[nif]
-fn new_context(p: &str) -> NifResult<ResourceArc<Context>> {
-    match Policy::parse(None, p) {
-        Ok(policy) => Ok(ResourceArc::new(Context {
-            policy: Mutex::new(policy),
-        })),
-        Err(e) => {
-            eprintln!("{:?}", e);
-            Err(Error::Atom("error"))
+fn new() -> ResourceArc<State> {
+    ResourceArc::new(State {
+        entities: RwLock::new(Entities::empty()),
+        policies: RwLock::new(PolicySet::new()),
+    })
+}
+
+#[nif]
+fn add_policy<'a>(
+    ctx: ResourceArc<State>,
+    policy: &'a str,
+    id: Option<&'a str>,
+) -> NifResult<ResourceArc<State>> {
+    match Policy::parse(id.map_or(None, |v| Some(PolicyId::new(v))), policy) {
+        Ok(p) => {
+            if let Ok(mut policies) = ctx.policies.write() {
+                policies.add(p).unwrap();
+            }
+            Ok(ctx)
         }
+        Err(_e) => Err(Error::BadArg),
     }
 }
 
 #[nif]
-fn get_policy_as_json(ctx: ResourceArc<Context>) -> impl Encoder {
-    let policy = ctx.policy.lock().unwrap();
-    policy.to_json().unwrap().to_string()
+fn add_entities<'a>(
+    ctx: ResourceArc<State>,
+    entities: Vec<ExEntity>,
+    schema: Option<&str>,
+) -> NifResult<ResourceArc<State>> {
+    let e = entities.into_iter().map(|entity| {
+        let attrs = entity
+            .attrs
+            .into_iter()
+            .map(|(k, v)| (k, v.to_restricted_expression()));
+
+        let tags = entity
+            .tags
+            .into_iter()
+            .map(|(k, v)| (k, v.to_restricted_expression()));
+
+        let parents = entity.parents.into_iter().map(|e| e.to_entity_uid());
+
+        Entity::new_with_tags(entity.id.to_entity_uid(), attrs, parents, tags).unwrap()
+    });
+
+    if let Ok(mut entities) = ctx.entities.write() {
+        let current = entities.clone();
+        let schema = schema.map_or(None, |s| parse_schema(s));
+        match current.add_entities(e, schema.as_ref()) {
+            Ok(new_entities) => {
+                *entities = new_entities;
+            }
+            Err(e) => handle_add_entity_error(e),
+        }
+    }
+
+    Ok(ctx)
+}
+
+#[nif]
+fn validate<'a>(ctx: ResourceArc<State>, schema: &'a str) -> NifResult<bool> {
+    if let Some(s) = parse_schema(schema) {
+        let policies = ctx.policies.read().unwrap();
+        let result = Validator::new(s).validate(&policies, ValidationMode::default());
+
+        for warning in result.validation_warnings() {
+            println!("WARNING: {}", warning);
+        }
+
+        for error in result.validation_errors() {
+            eprintln!("ERROR: {}", error);
+        }
+
+        Ok(result.validation_passed())
+    } else {
+        Ok(false)
+    }
 }
 
 #[nif]
 fn create_request<'a>(
+    ctx: ResourceArc<State>,
     p: ExEntityUid,
     a: ExEntityUid,
     r: ExEntityUid,
     // TODO: Support other types for RE & schema
-    c: Vec<(String, ExRestrictedExpression)>,
-    s: Option<&'a str>,
-) -> impl Encoder {
+    c: RecordItems,
+    s: Option<&str>,
+) -> NifResult<bool> {
     let p = p.to_entity_uid();
     let a = a.to_entity_uid();
     let r = r.to_entity_uid();
-    let c = CedarContext::from_pairs(
+    let c = Context::from_pairs(
         c.into_iter()
             .map(|(k, v)| (k, v.to_restricted_expression())),
     )
@@ -125,52 +199,118 @@ fn create_request<'a>(
     };
 
     match Request::new(p, a, r, c, s) {
-        Ok(_req) => {}
-        Err(e) => {
-            match e {
-                RequestValidationError::UndeclaredAction(undeclared_action_error) => {
-                    eprintln!(
-                        "Action {} not found",
-                        undeclared_action_error.action().to_json_value().unwrap()
-                    )
-                }
-                RequestValidationError::UndeclaredPrincipalType(
-                    undeclared_principal_type_error,
-                ) => {
-                    eprintln!(
-                        "Principal {} not found",
-                        undeclared_principal_type_error.principal_ty()
-                    )
-                }
-                RequestValidationError::UndeclaredResourceType(undeclared_resource_type_error) => {
-                    eprintln!(
-                        "Resource {} not found",
-                        undeclared_resource_type_error.resource_ty()
-                    )
-                }
-                RequestValidationError::InvalidPrincipalType(invalid_principal_type_error) => {
-                    eprintln!(
-                        "Invalid principal {}",
-                        invalid_principal_type_error.principal_ty()
-                    )
-                }
-                RequestValidationError::InvalidResourceType(invalid_resource_type_error) => {
-                    eprintln!(
-                        "Invalid resource type {}",
-                        invalid_resource_type_error.resource_ty()
-                    )
-                }
-                RequestValidationError::InvalidContext(invalid_context_error) => {
-                    eprintln!("Invalid context {}", invalid_context_error.context())
-                }
-                RequestValidationError::TypeOfContext(type_of_context_error) => {
-                    eprintln!("Invalid type of context {}", type_of_context_error)
-                }
-                RequestValidationError::InvalidEnumEntity(invalid_enum_entity_error) => {
-                    eprintln!("Invalid enum {}", invalid_enum_entity_error)
-                }
-                _ => todo!(),
-            };
+        Ok(r) => {
+            let response = Authorizer::new().is_authorized(
+                &r,
+                &*ctx.policies.read().unwrap(),
+                &*ctx.entities.read().unwrap(),
+            );
+
+            let diagnostics = response.diagnostics();
+
+            for err in diagnostics.errors() {
+                println!("Error: {}", err);
+            }
+
+            for reason in diagnostics.reason() {
+                println!("Reason: {}", reason);
+            }
+
+            match response.decision() {
+                cedar_policy::Decision::Allow => Ok(true),
+                cedar_policy::Decision::Deny => Ok(false),
+            }
         }
+        Err(e) => {
+            handle_request_error(e);
+            Err(Error::Atom("duck"))
+        }
+    }
+}
+
+fn parse_schema(schema: &str) -> Option<Schema> {
+    match Schema::from_cedarschema_str(schema) {
+        Ok((s, warnings)) => {
+            for warning in warnings {
+                println!("SCHEMA_WARNING: {}", warning);
+            }
+            Some(s)
+        }
+        Err(e) => match e {
+            cedar_policy::CedarSchemaError::Io(e) => {
+                eprintln!("IO failed: {}", e);
+                None
+            }
+            cedar_policy::CedarSchemaError::Parse(e) => {
+                eprintln!("Parsing failed: {}", e);
+                None
+            }
+            _ => todo!(),
+        },
+    }
+}
+
+fn handle_request_error(e: RequestValidationError) {
+    match e {
+        RequestValidationError::UndeclaredAction(undeclared_action_error) => {
+            eprintln!(
+                "Action {} not found",
+                undeclared_action_error.action().to_json_value().unwrap()
+            )
+        }
+        RequestValidationError::UndeclaredPrincipalType(undeclared_principal_type_error) => {
+            eprintln!(
+                "Principal {} not found",
+                undeclared_principal_type_error.principal_ty()
+            )
+        }
+        RequestValidationError::UndeclaredResourceType(undeclared_resource_type_error) => {
+            eprintln!(
+                "Resource {} not found",
+                undeclared_resource_type_error.resource_ty()
+            )
+        }
+        RequestValidationError::InvalidPrincipalType(invalid_principal_type_error) => {
+            eprintln!(
+                "Invalid principal {}",
+                invalid_principal_type_error.principal_ty()
+            )
+        }
+        RequestValidationError::InvalidResourceType(invalid_resource_type_error) => {
+            eprintln!(
+                "Invalid resource type {}",
+                invalid_resource_type_error.resource_ty()
+            )
+        }
+        RequestValidationError::InvalidContext(invalid_context_error) => {
+            eprintln!("Invalid context {}", invalid_context_error.context())
+        }
+        RequestValidationError::TypeOfContext(type_of_context_error) => {
+            eprintln!("Invalid type of context {}", type_of_context_error)
+        }
+        RequestValidationError::InvalidEnumEntity(invalid_enum_entity_error) => {
+            eprintln!("Invalid enum {}", invalid_enum_entity_error)
+        }
+        _ => todo!(),
     };
+}
+
+fn handle_add_entity_error(e: EntitiesError) {
+    match e {
+        EntitiesError::Serialization(json_serialization_error) => {
+            eprint!("Serialization error: {}", json_serialization_error);
+        }
+        EntitiesError::Deserialization(json_deserialization_error) => {
+            eprint!("Deserialization error: {}", json_deserialization_error);
+        }
+        EntitiesError::Duplicate(duplicate) => {
+            eprint!("Duplicate error: {}", duplicate);
+        }
+        EntitiesError::TransitiveClosureError(transitive_closure_error) => {
+            eprint!("TransitiveClosureError error: {}", transitive_closure_error);
+        }
+        EntitiesError::InvalidEntity(entity_schema_conformance_error) => {
+            eprint!("InvalidEntity error: {}", entity_schema_conformance_error);
+        }
+    }
 }
