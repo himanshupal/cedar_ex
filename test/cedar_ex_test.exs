@@ -16,7 +16,7 @@ defmodule CedarPolicyTest do
       principal == User::"bob",
       action == Action::"view",
       resource == Album::"trip"
-    ) when { principal.age > 18 && context.boolean };
+    ) when { principal.age >= 18 && context.boolean };
     """
 
     schema = """
@@ -37,7 +37,7 @@ defmodule CedarPolicyTest do
     a = EntityUid.new(EntityTypeName.new("Action"), "view")
     r = EntityUid.new(EntityTypeName.new("Album"), "trip")
 
-    pe = Entity.new(p, [{"age", {:long, 19}}])
+    pe = Entity.new(p, [{"age", {:long, 18}}])
     ae = Entity.new(a)
     re = Entity.new(r)
 
@@ -61,6 +61,6 @@ defmodule CedarPolicyTest do
       # {"record", {:record, [{"llong", {:ip, "192.168.1.1"}}, {"sstring", {:string, "text"}}]}}
     ]
 
-    dbg(CedarPolicy.create_request(state, p, a, r, c, schema))
+    dbg(Native.verify(state, p, a, r, c, schema))
   end
 end

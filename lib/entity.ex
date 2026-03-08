@@ -21,7 +21,11 @@ defmodule CedarPolicy.Entity do
 
   def new(id, attrs \\ [], parents \\ [], tags \\ [])
 
-  def new(id, attrs, parents, tags) when is_struct(id, EntityUid) do
+  def new(id, attrs, parents, tags)
+      when is_struct(id, EntityUid) and
+             is_list(parents) and
+             is_list(attrs) and
+             is_list(tags) do
     %CedarPolicy.Entity{
       id: id,
       attrs: attrs,

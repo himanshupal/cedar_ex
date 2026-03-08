@@ -1,5 +1,10 @@
 mod atoms;
-mod core;
-mod ctx;
+mod common;
+mod entity;
+mod error;
+mod policy;
+mod schema;
+mod state;
+mod version;
 
-rustler::init!("Elixir.CedarPolicy.Native", load = ctx::on_load);
+rustler::init!("Elixir.CedarPolicy.Native", load = state::on_load);

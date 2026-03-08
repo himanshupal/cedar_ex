@@ -10,7 +10,4 @@ defmodule CedarPolicy do
 
   @spec get_sdk_version() :: CedarPolicy.Version.t()
   def get_sdk_version(), do: Native.get_sdk_version()
-
-  def create_request(state, p, a, r, c \\ [], s \\ nil)
-  def create_request(state, p, a, r, c, s), do: Native.create_request(state, p, a, r, c, s)
 end
