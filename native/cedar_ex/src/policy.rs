@@ -10,10 +10,10 @@ use crate::{
 };
 
 #[nif]
-fn add_policy<'a>(
+fn add_policy(
     ctx: ResourceArc<State>,
-    policy: &'a str,
-    id: Option<&'a str>,
+    policy: &str,
+    id: Option<&str>,
 ) -> NifResult<ResourceArc<State>> {
     let p = Policy::parse(id.map_or(None, |v| Some(PolicyId::new(v))), policy).map_err(|e| {
         Error::Term(Box::new(ExError {
@@ -24,8 +24,8 @@ fn add_policy<'a>(
 
     {
         // FIXME: Better error handling
-        let mut policies = ctx.policies.write().unwrap();
-        policies.add(p).map_err(|e| {
+        let mut policy_set = ctx.policy_set.write().unwrap();
+        policy_set.add(p).map_err(|e| {
             Error::Term(Box::new(ExError {
                 source: atoms::policy(),
                 reason: e.to_string(),
@@ -37,7 +37,7 @@ fn add_policy<'a>(
 }
 
 #[nif]
-fn verify<'a>(
+fn verify(
     ctx: ResourceArc<State>,
     p: ExEntityUid,
     a: ExEntityUid,
@@ -58,7 +58,7 @@ fn verify<'a>(
         }))
     });
 
-    let s = s.map_or(None, |v| parse_schema(v));
+    let s = parse_schema(s);
 
     let rq = Request::new(p?, a?, r?, c?, s.as_ref()).map_err(|e| {
         Error::Term(Box::new(ExError {
@@ -70,7 +70,7 @@ fn verify<'a>(
     let response = Authorizer::new().is_authorized(
         &rq,
         // FIXME: Better error handling
-        &*ctx.policies.read().unwrap(),
+        &*ctx.policy_set.read().unwrap(),
         &*ctx.entities.read().unwrap(),
     );
 

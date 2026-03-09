@@ -19,7 +19,7 @@ pub(crate) struct ExEntity {
 }
 
 #[nif]
-pub(crate) fn add_entities<'a>(
+pub(crate) fn add_entities(
     ctx: ResourceArc<State>,
     entities: Vec<ExEntity>,
     schema: Option<&str>,
@@ -51,7 +51,7 @@ pub(crate) fn add_entities<'a>(
         let mut entities = ctx.entities.write().unwrap();
 
         let current = entities.clone();
-        let schema = schema.map_or(None, |s| parse_schema(s));
+        let schema = parse_schema(schema);
 
         *entities = current.add_entities(e, schema.as_ref()).map_err(|e| {
             Error::Term(Box::new(ExError {

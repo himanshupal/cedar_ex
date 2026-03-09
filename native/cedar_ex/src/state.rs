@@ -6,7 +6,7 @@ use crate::atoms;
 
 pub struct State {
     pub entities: RwLock<Entities>,
-    pub policies: RwLock<PolicySet>,
+    pub policy_set: RwLock<PolicySet>,
 }
 
 impl Resource for State {
@@ -25,6 +25,6 @@ pub(crate) fn on_load(env: Env, _: Term) -> bool {
 pub(crate) fn new() -> ResourceArc<State> {
     ResourceArc::new(State {
         entities: RwLock::new(Entities::empty()),
-        policies: RwLock::new(PolicySet::new()),
+        policy_set: RwLock::new(PolicySet::new()),
     })
 }

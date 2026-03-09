@@ -6,4 +6,5 @@ rustler::atoms! {
     policy,
     request,
     restricted_expression,
+    template,
 }

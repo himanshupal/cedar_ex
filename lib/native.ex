@@ -14,8 +14,19 @@ defmodule CedarPolicy.Native do
           id :: String.t() | nil
         ) :: pid()
 
-  def add_policy(_state, _policy, _id \\ nil)
+  def add_policy(state, policy, id \\ nil)
   def add_policy(_state, _policy, _id), do: not_loaded()
+
+  @spec add_template(
+          state :: pid(),
+          template :: String.t(),
+          id :: String.t() | nil
+        ) :: pid()
+
+  def add_template(state, template, id \\ nil)
+  def add_template(_state, _template, _id), do: not_loaded()
+
+  def link(_state, _template_id, _policy_id, _values), do: not_loaded()
 
   @spec add_entities(
           state :: pid(),
@@ -43,7 +54,7 @@ defmodule CedarPolicy.Native do
           context :: list({String.t(), RestrictedExpression.t()}),
           schema :: String.t() | nil
         ) :: boolean()
-  def verify(_state, _p, _a, _r, _c, _s \\ nil)
+  def verify(state, p, a, r, c, s \\ nil)
   def verify(_state, _p, _a, _r, _c, _s), do: not_loaded()
 
   defp not_loaded, do: :erlang.nif_error(:nif_not_loaded)
