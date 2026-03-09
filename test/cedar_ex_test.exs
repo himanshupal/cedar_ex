@@ -6,6 +6,7 @@ defmodule CedarPolicyTest do
   alias CedarPolicy.EntityUid
   alias CedarPolicy.Entity
   alias CedarPolicy.Native
+  alias CedarPolicy.Record
 
   test "Works!" do
     CedarPolicy.get_lang_version()
@@ -28,6 +29,9 @@ defmodule CedarPolicyTest do
     """
 
     schema = """
+        type UserId = {
+          name: String
+        };
         entity User {
           "age": Long
         };
@@ -36,7 +40,25 @@ defmodule CedarPolicyTest do
             principal : User,
             resource : Album,
             context : {
+              "ip": ipaddr,
               "boolean": Bool,
+              "atom": String,
+              "string": String,
+              "long": Long,
+              "sett": Set<Long>,
+              "user_set": Set<User>,
+              "users": Set<UserId>,
+              "entity": User,
+              "decimal": decimal,
+              "datetime": datetime,
+              "duration": duration,
+              "record": {
+                "key1": String,
+                "key2": decimal,
+                "key3": {
+                  "a": Long
+                },
+              }
             }
         };
     """
@@ -46,8 +68,8 @@ defmodule CedarPolicyTest do
     a = EntityUid.new(EntityTypeName.new("Action"), "view")
     r = EntityUid.new(EntityTypeName.new("Album"), "trip")
 
-    pb = Entity.new(p0, [{"age", {:long, 18}}])
-    pa = Entity.new(p1, [{"age", {:long, 18}}])
+    pb = Entity.new(p0, Record.new(age: 17))
+    pa = Entity.new(p1, Record.new(age: 18))
     ab = Entity.new(a)
     rb = Entity.new(r)
 
@@ -60,18 +82,22 @@ defmodule CedarPolicyTest do
 
     assert Native.validate(state, schema)
 
-    c = [
-      {"boolean", {:bool, true}}
-      # {"long", {:long, 123_456}},
-      # {"ip", {:ip, "127.0.0.1"}},
-      # {"string", {:string, "text"}},
-      # {"decimal", {:decimal, "1.23"}},
-      # {"datetime", {:date_time, "2015-01-13T13:00:07.001Z"}},
-      # {"duration", {:duration, "24h"}},
-      # {"entityUid", {:entity_uid, p}},
-      # {"set", {:set, [{:long, 123}, {:string, "text"}]}},
-      # {"record", {:record, [{"llong", {:ip, "192.168.1.1"}}, {"sstring", {:string, "text"}}]}}
-    ]
+    c =
+      Record.new(
+        long: 123,
+        boolean: true,
+        atom: :atom,
+        string: "value",
+        decimal: 123.456,
+        entity: pb,
+        sett: [1, 2, 3],
+        user_set: [pb, pa],
+        users: [Record.new(name: "bob"), Record.new(name: :alice)],
+        datetime: ~U[2023-02-28T11:35:00.000Z],
+        duration: "3s0ms",
+        record: Record.new(key1: "value1", key2: 2.0, key3: Record.new(a: 1)),
+        ip: "10.50.0.0/24"
+      )
 
     dbg(Native.verify(state, p0, a, r, c, schema))
     dbg(Native.verify(state, p1, a, r, c, schema))

@@ -1,9 +1,9 @@
 defmodule CedarPolicy.Native do
   use Rustler, otp_app: :cedar_policy, crate: "cedar_ex"
 
-  alias CedarPolicy.RestrictedExpression
   alias CedarPolicy.EntityUid
   alias CedarPolicy.Entity
+  alias CedarPolicy.Record
 
   @spec new() :: pid()
   def new(), do: not_loaded()
@@ -51,7 +51,7 @@ defmodule CedarPolicy.Native do
           principal :: EntityUid.t(),
           action :: EntityUid.t(),
           resource :: EntityUid.t(),
-          context :: list({String.t(), RestrictedExpression.t()}),
+          context :: Record.t(),
           schema :: String.t() | nil
         ) :: boolean()
   def verify(state, p, a, r, c, s \\ nil)

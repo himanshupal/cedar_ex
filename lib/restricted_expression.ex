@@ -1,5 +1,5 @@
 defmodule CedarPolicy.RestrictedExpression do
-  alias CedarPolicy.EntityUid
+  alias CedarPolicy.Entity
 
   @type t() ::
           {:set, list(t())}
@@ -10,6 +10,6 @@ defmodule CedarPolicy.RestrictedExpression do
           | {:decimal, String.t()}
           | {:date_time, String.t()}
           | {:duration, String.t()}
-          | {:entity_uid, EntityUid.t()}
+          | {:entity, Entity.t()}
           | {:record, list({String.t(), t()})}
 end

@@ -12,10 +12,10 @@ use crate::{
 #[derive(NifStruct, Debug)]
 #[module = "CedarPolicy.Entity"]
 pub(crate) struct ExEntity {
-    id: ExEntityUid,
-    tags: Vec<ExRecordItem>,
-    attrs: Vec<ExRecordItem>,
-    parents: Vec<ExEntityUid>,
+    pub(crate) id: ExEntityUid,
+    pub(crate) tags: Vec<ExRecordItem>,
+    pub(crate) attrs: Vec<ExRecordItem>,
+    pub(crate) parents: Vec<ExEntityUid>,
 }
 
 #[nif]
@@ -51,7 +51,7 @@ pub(crate) fn add_entities(
         let mut entities = ctx.entities.write().unwrap();
 
         let current = entities.clone();
-        let schema = parse_schema(schema);
+        let schema = parse_schema(schema)?;
 
         *entities = current.add_entities(e, schema.as_ref()).map_err(|e| {
             Error::Term(Box::new(ExError {

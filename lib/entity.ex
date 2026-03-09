@@ -2,21 +2,20 @@ defmodule CedarPolicy.Entity do
   defstruct [:id, :attrs, :parents, :tags]
 
   alias CedarPolicy.EntityUid
-  alias CedarPolicy.RestrictedExpression
+  alias CedarPolicy.Record
 
   @type t() :: %CedarPolicy.Entity{
           id: EntityUid.t(),
-          attrs: list({String.t(), RestrictedExpression.t()}),
+          attrs: Record.t(),
           parents: list(EntityUid.t()),
-          tags: list({String.t(), RestrictedExpression.t()})
+          tags: Record.t()
         }
 
   @spec new(
           id :: EntityUid.t(),
-          attrs ::
-            list({String.t(), RestrictedExpression.t()}),
+          attrs :: Record.t(),
           parents :: list(EntityUid.t()),
-          tags :: list({String.t(), RestrictedExpression.t()})
+          tags :: Record.t()
         ) :: t()
 
   def new(id, attrs \\ [], parents \\ [], tags \\ [])

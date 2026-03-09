@@ -58,7 +58,7 @@ fn verify(
         }))
     });
 
-    let s = parse_schema(s);
+    let s = parse_schema(s)?;
 
     let rq = Request::new(p?, a?, r?, c?, s.as_ref()).map_err(|e| {
         Error::Term(Box::new(ExError {

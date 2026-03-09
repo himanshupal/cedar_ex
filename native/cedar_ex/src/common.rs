@@ -2,7 +2,7 @@ use cedar_policy::{EntityId, EntityTypeName, EntityUid, RestrictedExpression};
 use rustler::{Error, NifResult, NifStruct, NifTaggedEnum};
 use std::{fmt::Display, str::FromStr};
 
-use crate::{atoms, error::ExError};
+use crate::{atoms, entity::ExEntity, error::ExError};
 
 pub(crate) type RecordItems = Vec<(String, RestrictedExpression)>;
 
@@ -65,7 +65,7 @@ pub(crate) enum ExRestrictedExpression {
     Decimal(String),
     DateTime(String),
     Duration(String),
-    EntityUid(ExEntityUid),
+    Entity(ExEntity),
     Record(Vec<ExRecordItem>),
     Set(Vec<ExRestrictedExpression>),
 }
@@ -90,8 +90,8 @@ impl Into<NifResult<RestrictedExpression>> for ExRestrictedExpression {
                     .map(|v| v.into())
                     .collect::<NifResult<Vec<RestrictedExpression>>>()?,
             )),
-            ExRestrictedExpression::EntityUid(value) => {
-                let entity_uid: NifResult<EntityUid> = value.into();
+            ExRestrictedExpression::Entity(value) => {
+                let entity_uid: NifResult<EntityUid> = value.id.into();
                 Ok(RestrictedExpression::new_entity_uid(entity_uid?))
             }
             ExRestrictedExpression::Record(r) => {
