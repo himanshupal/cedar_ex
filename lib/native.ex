@@ -40,10 +40,10 @@ defmodule CedarPolicy.Native do
   @spec validate(state :: pid(), schema :: String.t()) :: boolean()
   def validate(_state, _schema), do: not_loaded()
 
-  @spec get_lang_version() :: CedarPolicy.Version.t()
+  @spec get_lang_version() :: Version.t()
   def get_lang_version(), do: not_loaded()
 
-  @spec get_sdk_version() :: CedarPolicy.Version.t()
+  @spec get_sdk_version() :: Version.t()
   def get_sdk_version(), do: not_loaded()
 
   @spec verify(
