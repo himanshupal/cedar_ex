@@ -1,6 +1,5 @@
 rustler::atoms! {
     context,
-    duration,
     entity,
     entity_uid,
     ok,
