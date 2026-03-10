@@ -181,6 +181,8 @@ dependencies = [
  "cedar-policy",
  "rustler",
  "semver",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

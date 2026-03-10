@@ -1,4 +1,4 @@
-use cedar_policy::{Authorizer, Context, EntityUid, Policy, PolicyId, Request};
+use cedar_policy::{Context, EntityUid, Policy, PolicyId, Request};
 use rustler::{Error, NifResult, ResourceArc, nif};
 
 use crate::{
@@ -15,13 +15,44 @@ fn add_policy(
     policy: &str,
     id: Option<&str>,
 ) -> NifResult<ResourceArc<State>> {
-    let p = Policy::parse(id.map_or(None, |v| Some(PolicyId::new(v))), policy).map_err(|e| {
+    let id = id.map_or(None, |v| Some(PolicyId::new(v)));
+
+    let p = Policy::parse(id, policy).map_err(|e| {
         Error::Term(Box::new(ExError {
             source: atoms::policy(),
             reason: e.to_string(),
         }))
     })?;
 
+    add_policy_to_set(ctx, p)
+}
+
+#[nif]
+fn add_policy_json(
+    ctx: ResourceArc<State>,
+    policy: &str,
+    id: Option<&str>,
+) -> NifResult<ResourceArc<State>> {
+    let id = id.map_or(None, |v| Some(PolicyId::new(v)));
+
+    let json = serde_json::from_str(policy).map_err(|e| {
+        Error::Term(Box::new(ExError {
+            source: atoms::json(),
+            reason: e.to_string(),
+        }))
+    })?;
+
+    let p = Policy::from_json(id, json).map_err(|e| {
+        Error::Term(Box::new(ExError {
+            source: atoms::json(),
+            reason: e.to_string(),
+        }))
+    })?;
+
+    add_policy_to_set(ctx, p)
+}
+
+fn add_policy_to_set(ctx: ResourceArc<State>, p: Policy) -> NifResult<ResourceArc<State>> {
     {
         // FIXME: Better error handling
         let mut policy_set = ctx.policy_set.write().unwrap();
@@ -67,7 +98,8 @@ fn verify(
         }))
     })?;
 
-    let response = Authorizer::new().is_authorized(
+    let authorizer = &*ctx.authorizer.read().unwrap();
+    let response = authorizer.is_authorized(
         &rq,
         // FIXME: Better error handling
         &*ctx.policy_set.read().unwrap(),
@@ -76,8 +108,12 @@ fn verify(
 
     let diagnostics = response.diagnostics();
 
-    for err in diagnostics.errors() {
-        println!("Error: {}", err);
+    for error in diagnostics.errors() {
+        eprintln!("VERIFICATION_ERROR: {}", error);
+        return Err(Error::Term(Box::new(ExError {
+            source: atoms::request(),
+            reason: error.to_string(),
+        })));
     }
 
     for reason in diagnostics.reason() {

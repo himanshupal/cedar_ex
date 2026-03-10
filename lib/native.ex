@@ -5,23 +5,32 @@ defmodule CedarPolicy.Native do
   alias CedarPolicy.Entity
   alias CedarPolicy.Record
 
-  @spec new() :: pid()
+  @spec new() :: reference()
   def new(), do: not_loaded()
 
   @spec add_policy(
-          state :: pid(),
+          state :: reference(),
           policy :: String.t(),
           id :: String.t() | nil
-        ) :: pid()
+        ) :: reference()
 
   def add_policy(state, policy, id \\ nil)
   def add_policy(_state, _policy, _id), do: not_loaded()
 
+  @spec add_policy_json(
+          state :: reference(),
+          policy :: String.t(),
+          id :: String.t() | nil
+        ) :: reference()
+
+  def add_policy_json(state, policy, id \\ nil)
+  def add_policy_json(_state, _policy, _id), do: not_loaded()
+
   @spec add_template(
-          state :: pid(),
+          state :: reference(),
           template :: String.t(),
           id :: String.t() | nil
-        ) :: pid()
+        ) :: reference()
 
   def add_template(state, template, id \\ nil)
   def add_template(_state, _template, _id), do: not_loaded()
@@ -29,16 +38,23 @@ defmodule CedarPolicy.Native do
   def link(_state, _template_id, _policy_id, _values), do: not_loaded()
 
   @spec add_entities(
-          state :: pid(),
+          state :: reference(),
           entities :: list(Entity.t()),
           schema :: String.t() | nil
-        ) :: pid()
+        ) :: reference()
 
   def add_entities(_state, _entities, _schema \\ nil)
   def add_entities(_state, _entities, _schema), do: not_loaded()
 
-  @spec validate(state :: pid(), schema :: String.t()) :: boolean()
-  def validate(_state, _schema), do: not_loaded()
+  @spec validate(state :: reference(), schema :: String.t(), strict :: boolean() | nil) ::
+          boolean()
+  def validate(_state, _schema, _strict \\ nil)
+  def validate(_state, _schema, _strict), do: not_loaded()
+
+  @spec validate_json(state :: reference(), schema :: String.t(), strict :: boolean() | nil) ::
+          boolean()
+  def validate_json(_state, _schema, _strict \\ nil)
+  def validate_json(_state, _schema, _strict), do: not_loaded()
 
   @spec get_lang_version() :: Version.t()
   def get_lang_version(), do: not_loaded()
@@ -47,7 +63,7 @@ defmodule CedarPolicy.Native do
   def get_sdk_version(), do: not_loaded()
 
   @spec verify(
-          state :: pid(),
+          state :: reference(),
           principal :: EntityUid.t(),
           action :: EntityUid.t(),
           resource :: EntityUid.t(),

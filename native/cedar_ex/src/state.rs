@@ -1,12 +1,13 @@
-use cedar_policy::{Entities, PolicySet};
+use cedar_policy::{Authorizer, Entities, PolicySet};
 use rustler::{Env, Resource, ResourceArc, Term, nif};
 use std::sync::RwLock;
 
 use crate::atoms;
 
-pub struct State {
-    pub entities: RwLock<Entities>,
-    pub policy_set: RwLock<PolicySet>,
+pub(crate) struct State {
+    pub(crate) entities: RwLock<Entities>,
+    pub(crate) policy_set: RwLock<PolicySet>,
+    pub(crate) authorizer: RwLock<Authorizer>,
 }
 
 impl Resource for State {
@@ -26,5 +27,6 @@ pub(crate) fn new() -> ResourceArc<State> {
     ResourceArc::new(State {
         entities: RwLock::new(Entities::empty()),
         policy_set: RwLock::new(PolicySet::new()),
+        authorizer: RwLock::new(Authorizer::new()),
     })
 }

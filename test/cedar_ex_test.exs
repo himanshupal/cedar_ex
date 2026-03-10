@@ -79,8 +79,7 @@ defmodule CedarPolicyTest do
       |> Native.add_template(template0, "template0")
       |> Native.add_entities([pb, pa, ab, rb], schema)
       |> Native.link("template0", "policy1", %{principal: p1, resource: r})
-
-    assert Native.validate(state, schema)
+      |> Native.validate(schema)
 
     c =
       Record.new(
