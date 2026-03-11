@@ -4,21 +4,15 @@ defmodule CedarPolicy.MixProject do
   def project do
     [
       app: :cedar_policy,
-      version: "0.1.0",
+      version: "0.0.0-development",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
+      description: "Elixir bindings for cedar_policy rust package",
+      source_url: "https://github.com/himanshupal/cedar_ex",
       deps: deps()
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
-  def application do
-    [
-      extra_applications: [:logger]
-    ]
-  end
-
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:rustler, "~> 0.37.3", runtime: false}

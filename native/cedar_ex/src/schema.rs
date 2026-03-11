@@ -44,8 +44,7 @@ fn validate_schema(
         let result = Validator::new(schema).validate(&policy_set, ValidationMode::default());
 
         for error in result.validation_errors() {
-            eprintln!("VALIDATION_ERROR: {}", error);
-            return Err(Error::RaiseTerm(Box::new(ExError {
+            return Err(Error::Term(Box::new(ExError {
                 source: atoms::schema(),
                 reason: error.to_string(),
             })));
@@ -54,7 +53,7 @@ fn validate_schema(
         for warning in result.validation_warnings() {
             println!("VALIDATION_WARNING: {}", warning);
             if strict {
-                return Err(Error::RaiseTerm(Box::new(ExError {
+                return Err(Error::Term(Box::new(ExError {
                     source: atoms::schema(),
                     reason: warning.to_string(),
                 })));

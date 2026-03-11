@@ -1,4 +1,5 @@
 mod atoms;
+mod auth;
 mod common;
 mod entity;
 mod error;

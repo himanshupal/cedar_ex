@@ -46,6 +46,15 @@ defmodule CedarPolicy.Native do
   def add_entities(_state, _entities, _schema \\ nil)
   def add_entities(_state, _entities, _schema), do: not_loaded()
 
+  @spec add_entities(
+          state :: reference(),
+          entities :: String.t(),
+          schema :: String.t() | nil
+        ) :: reference()
+
+  def add_entities_json(_state, _entities, _schema \\ nil)
+  def add_entities_json(_state, _entities, _schema), do: not_loaded()
+
   @spec validate(state :: reference(), schema :: String.t(), strict :: boolean() | nil) ::
           boolean()
   def validate(_state, _schema, _strict \\ nil)

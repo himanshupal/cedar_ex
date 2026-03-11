@@ -1,11 +1,11 @@
-use cedar_policy::{Entity, EntityUid};
+use cedar_policy::{Entities, Entity, EntityUid, Schema};
 use rustler::{Error, NifResult, NifStruct, ResourceArc, nif};
 
 use crate::{
     atoms,
     common::{ExEntityUid, ExRecordItem, ExRecordItems, RecordItems},
     error::ExError,
-    schema::parse_schema,
+    schema::{parse_schema, parse_schema_json},
     state::State,
 };
 
@@ -24,6 +24,8 @@ pub(crate) fn add_entities(
     entities: Vec<ExEntity>,
     schema: Option<&str>,
 ) -> NifResult<ResourceArc<State>> {
+    let s = parse_schema(schema)?;
+
     let e = entities
         .into_iter()
         .map(|entity| -> NifResult<Entity> {
@@ -46,14 +48,38 @@ pub(crate) fn add_entities(
         })
         .collect::<NifResult<Vec<Entity>>>()?;
 
+    save_entities(ctx, e, s)
+}
+
+#[nif]
+pub(crate) fn add_entities_json(
+    ctx: ResourceArc<State>,
+    entities: &str,
+    schema: Option<&str>,
+) -> NifResult<ResourceArc<State>> {
+    let s = parse_schema_json(schema)?;
+
+    let e = Entities::from_json_str(entities, s.as_ref()).map_err(|e| {
+        Error::Term(Box::new(ExError {
+            source: atoms::entity(),
+            reason: e.to_string(),
+        }))
+    })?;
+
+    save_entities(ctx, e, s)
+}
+
+fn save_entities(
+    ctx: ResourceArc<State>,
+    e: impl IntoIterator<Item = Entity>,
+    s: Option<Schema>,
+) -> NifResult<ResourceArc<State>> {
     {
-        // FIXME: Better error handling
         let mut entities = ctx.entities.write().unwrap();
-
         let current = entities.clone();
-        let schema = parse_schema(schema)?;
+        // FIXME: Better error handling
 
-        *entities = current.add_entities(e, schema.as_ref()).map_err(|e| {
+        *entities = current.add_entities(e, s.as_ref()).map_err(|e| {
             Error::Term(Box::new(ExError {
                 source: atoms::entity(),
                 reason: e.to_string(),
