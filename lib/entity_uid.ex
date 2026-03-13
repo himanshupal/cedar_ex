@@ -3,7 +3,7 @@ defmodule CedarPolicy.EntityUid do
 
   alias CedarPolicy.EntityTypeName
 
-  @type t() :: %CedarPolicy.EntityUid{type_name: String.t(), id: String.t()}
+  @type t() :: %__MODULE__{type_name: String.t(), id: String.t()}
   @spec new(type_name :: EntityTypeName.t() | String.t(), id :: String.t() | atom()) :: t()
 
   @valid_entity_type_name_regex [
@@ -34,7 +34,7 @@ defmodule CedarPolicy.EntityUid do
   end
 
   defp from_string({:entity_type_name, entity_type_name}, id) do
-    %CedarPolicy.EntityUid{type_name: entity_type_name, id: id}
+    %__MODULE__{type_name: entity_type_name, id: id}
   end
 
   defp validate(value) do

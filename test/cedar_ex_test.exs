@@ -5,7 +5,6 @@ defmodule CedarPolicyTest do
   alias CedarPolicy.EntityTypeName
   alias CedarPolicy.EntityUid
   alias CedarPolicy.Entity
-  alias CedarPolicy.Native
   alias CedarPolicy.Record
 
   test "Works!" do
@@ -74,12 +73,12 @@ defmodule CedarPolicyTest do
     rb = Entity.new(r)
 
     v1 =
-      Native.new()
-      |> Native.add_policy(policy0, "policy0")
-      |> Native.add_template(template0, "template0")
-      |> Native.add_entities([pb, pa, ab, rb], schema)
-      |> Native.link("template0", "policy1", %{principal: p1, resource: r})
-      |> Native.validate(schema)
+      CedarPolicy.new()
+      |> CedarPolicy.add_policy(policy0, "policy0")
+      |> CedarPolicy.add_template(template0, "template0")
+      |> CedarPolicy.add_entities([pb, pa, ab, rb], schema)
+      |> CedarPolicy.link("template0", "policy1", %{principal: p1, resource: r})
+      |> CedarPolicy.validate(schema)
 
     ns =
       ~s({"":{"commonTypes":{"ContextType":{"type":"Record","attributes":{"boolean":{"type":"Bool","required":true}}}},"entityTypes":{"User":{"shape":{"type":"Record","attributes":{"age":{"type":"Long"}}}},"Album":{"shape":{"type":"Record","attributes":{}}}},"actions":{"view":{"appliesTo":{"principalTypes":["User"],"resourceTypes":["Album"],"context":{"type":"ContextType"}}}}}})
@@ -90,11 +89,10 @@ defmodule CedarPolicyTest do
     np =
       ~s({"effect":"permit","principal":{"op":"==","entity":{"type":"User","id":"bob"}},"action":{"op":"==","entity":{"type":"Action","id":"view"}},"resource":{"op":"==","entity":{"type":"Album","id":"trip"}},"conditions":[{"kind":"when","body":{"&&":{"left":{">=":{"left":{".":{"left":{"Var":"principal"},"attr":"age"}},"right":{"Value":18}}},"right":{".":{"left":{"Var":"context"},"attr":"boolean"}}}}}]})
 
-    # TODO: Add verification for it
-    Native.new()
-    |> Native.add_policy_json(np, "policyJ")
-    |> Native.add_entities_json(ne, ns)
-    |> Native.validate_json(ns)
+    CedarPolicy.new()
+    |> CedarPolicy.add_policy({:json, np}, "policyJ")
+    |> CedarPolicy.add_entities({:json, ne}, {:json, ns})
+    |> CedarPolicy.validate({:json, ns})
 
     c =
       Record.new(
@@ -113,7 +111,7 @@ defmodule CedarPolicyTest do
         ip: "10.50.0.0/24"
       )
 
-    assert Native.verify(v1, p0, a, r, c, schema) == false
-    assert Native.verify(v1, p1, a, r, c, schema) == true
+    assert CedarPolicy.verify(v1, p0, a, r, c, schema) == false
+    assert CedarPolicy.verify(v1, p1, a, r, c, schema) == true
   end
 end

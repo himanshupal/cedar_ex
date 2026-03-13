@@ -1,11 +1,26 @@
 defmodule CedarPolicy.Record do
-  alias CedarPolicy.RestrictedExpression
+  @moduledoc """
+
+  """
+
   alias CedarPolicy.Entity
 
   @datetime_regex ~r"^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?:T(?:[01]\d|2[0-3]):(?:[0-5]\d):(?:[0-5]\d)(?:\.\d{3})?(?:Z|[+-](?:[01]\d|2[0-3])(?:[0-5]\d)))?$"
   @duration_regex ~r"^(\d+d){0,1}(\d+h){0,1}(\d+m){0,1}(\d+s){0,1}(\d+ms){0,1}$"
 
-  @type t() :: list({String.t(), RestrictedExpression.t()})
+  @type restricted_expression ::
+          {:set, list(t())}
+          | {:long, integer()}
+          | {:bool, boolean()}
+          | {:ip, String.t()}
+          | {:string, String.t()}
+          | {:decimal, String.t()}
+          | {:date_time, String.t()}
+          | {:duration, String.t()}
+          | {:entity, Entity.t()}
+          | {:record, list({String.t(), t()})}
+
+  @type t :: list({String.t(), restricted_expression})
 
   @type value() ::
           atom() | integer() | float() | boolean() | String.t() | Entity.t() | DateTime.t() | t()

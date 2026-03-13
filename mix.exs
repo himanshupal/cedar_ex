@@ -1,13 +1,15 @@
 defmodule CedarPolicy.MixProject do
   use Mix.Project
 
+  @version "0.0.0-development"
+
   def project do
     [
       app: :cedar_policy,
-      version: "0.0.0-development",
+      version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      description: "Elixir bindings for cedar_policy rust package",
+      description: "Elixir bindings for cedar-policy rust package",
       source_url: "https://github.com/himanshupal/cedar_ex",
       package: package(),
       deps: deps()

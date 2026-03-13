@@ -1,5 +1,9 @@
 defmodule CedarPolicy.Error do
+  @moduledoc """
+
+  """
+
   defstruct [:source, :reason]
 
-  @type t() :: %CedarPolicy.Error{source: atom(), reason: String.t()}
+  @type t() :: %__MODULE__{source: atom(), reason: String.t()}
 end

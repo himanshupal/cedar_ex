@@ -3,7 +3,7 @@ use rustler::{Error, NifResult, ResourceArc, nif};
 
 use crate::{
     atoms,
-    common::{ExEntityUid, ExRecordItem, ExRecordItems, RecordItems},
+    common::{ExEntityUid, ExFormat, ExRecordItem, ExRecordItems, RecordItems},
     error::ExError,
     schema::parse_schema,
     state::State,
@@ -17,7 +17,7 @@ fn verify(
     r: ExEntityUid,
     // TODO: Support other types for RE & schema
     c: Vec<ExRecordItem>,
-    s: Option<&str>,
+    s: Option<ExFormat>,
 ) -> NifResult<bool> {
     let p: NifResult<EntityUid> = p.into();
     let a: NifResult<EntityUid> = a.into();

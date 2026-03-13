@@ -1,6 +1,13 @@
 defmodule CedarPolicy.RestrictedExpression do
+  @moduledoc """
+  """
+
+  alias CedarPolicy.Record
   alias CedarPolicy.Entity
 
+  @typedoc """
+  Type definition for restricted params
+  """
   @type t() ::
           {:set, list(t())}
           | {:long, integer()}
@@ -11,5 +18,5 @@ defmodule CedarPolicy.RestrictedExpression do
           | {:date_time, String.t()}
           | {:duration, String.t()}
           | {:entity, Entity.t()}
-          | {:record, list({String.t(), t()})}
+          | {:record, Record.t()}
 end

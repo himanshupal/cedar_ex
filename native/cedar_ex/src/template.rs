@@ -3,7 +3,12 @@ use std::collections::HashMap;
 use cedar_policy::{EntityUid, PolicyId, SlotId, Template};
 use rustler::{Error, NifResult, NifUnitEnum, ResourceArc, nif};
 
-use crate::{atoms, common::ExEntityUid, error::ExError, state::State};
+use crate::{
+    atoms,
+    common::{ExEntityUid, ExFormat},
+    error::ExError,
+    state::State,
+};
 
 #[derive(NifUnitEnum, PartialEq, Eq, Hash, Debug)]
 pub(crate) enum ExSlotId {
@@ -14,16 +19,34 @@ pub(crate) enum ExSlotId {
 #[nif]
 pub(crate) fn add_template(
     ctx: ResourceArc<State>,
-    template: &str,
+    template: ExFormat,
     id: Option<&str>,
 ) -> NifResult<ResourceArc<State>> {
-    let t =
-        Template::parse(id.map_or(None, |v| Some(PolicyId::new(v))), template).map_err(|e| {
+    let id = id.map_or(None, |v| Some(PolicyId::new(v)));
+
+    let t = match template {
+        ExFormat::Cedar(value) => Template::parse(id, value).map_err(|e| {
             Error::Term(Box::new(ExError {
                 source: atoms::template(),
                 reason: e.to_string(),
             }))
-        })?;
+        }),
+        ExFormat::Json(value) => {
+            let json = serde_json::from_str(value).map_err(|e| {
+                Error::Term(Box::new(ExError {
+                    source: atoms::json(),
+                    reason: e.to_string(),
+                }))
+            })?;
+
+            Template::from_json(id, json).map_err(|e| {
+                Error::Term(Box::new(ExError {
+                    source: atoms::template(),
+                    reason: e.to_string(),
+                }))
+            })
+        }
+    }?;
 
     {
         // FIXME: Better error handling

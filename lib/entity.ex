@@ -4,19 +4,9 @@ defmodule CedarPolicy.Entity do
   alias CedarPolicy.EntityUid
   alias CedarPolicy.Record
 
-  @type t() :: %CedarPolicy.Entity{
-          id: EntityUid.t(),
-          attrs: Record.t(),
-          parents: list(EntityUid.t()),
-          tags: Record.t()
-        }
+  @type t() :: %__MODULE__{id: EntityUid.t(), attrs: Record.t(), parents: list(EntityUid.t()), tags: Record.t()}
 
-  @spec new(
-          id :: EntityUid.t(),
-          attrs :: Record.t(),
-          parents :: list(EntityUid.t()),
-          tags :: Record.t()
-        ) :: t()
+  @spec new(id :: EntityUid.t(), attrs :: Record.t(), parents :: list(EntityUid.t()), tags :: Record.t()) :: t()
 
   def new(id, attrs \\ [], parents \\ [], tags \\ [])
 
