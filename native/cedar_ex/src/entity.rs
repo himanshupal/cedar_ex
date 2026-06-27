@@ -1,8 +1,7 @@
 use cedar_policy::{Entities, Entity, EntityUid};
-use rustler::{Error, NifResult, NifStruct, NifTaggedEnum, ResourceArc, nif};
+use rustler::{NifResult, NifStruct, NifTaggedEnum, ResourceArc, nif};
 
 use crate::{
-    atoms,
     common::{ExEntityUid, ExFormat, ExRecordItem, ExRecordItems, RecordItems},
     error::ExError,
     schema::parse_schema,
@@ -46,21 +45,12 @@ pub(crate) fn add_entities(
                     .map(|v| v.into())
                     .collect::<NifResult<Vec<EntityUid>>>()?;
 
-                Entity::new_with_tags(id?, attrs?, parents, tags?).map_err(|e| {
-                    Error::Term(Box::new(ExError {
-                        source: atoms::entity(),
-                        reason: e.inner().to_string(),
-                    }))
-                })
+                Entity::new_with_tags(id?, attrs?, parents, tags?)
+                    .map_err(|e| ExError::from(e).into())
             })
             .collect(),
         ExEntityFormat::Json(value) => Ok(Entities::from_json_str(value, s.as_ref())
-            .map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::entity(),
-                    reason: e.to_string(),
-                }))
-            })?
+            .map_err(|e| ExError::from(e).into())?
             .into_iter()
             .collect()),
     }?;
@@ -71,12 +61,9 @@ pub(crate) fn add_entities(
         let current = entities.clone();
         // FIXME: Better error handling
 
-        *entities = current.add_entities(e, s.as_ref()).map_err(|e| {
-            Error::Term(Box::new(ExError {
-                source: atoms::entity(),
-                reason: e.to_string(),
-            }))
-        })?;
+        *entities = current
+            .add_entities(e, s.as_ref())
+            .map_err(|e| ExError::from(e).into())?;
     }
 
     Ok(ctx)

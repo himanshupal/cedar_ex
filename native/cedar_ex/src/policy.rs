@@ -1,7 +1,7 @@
 use cedar_policy::{Policy, PolicyId};
-use rustler::{Error, NifResult, ResourceArc, nif};
+use rustler::{NifResult, ResourceArc, nif};
 
-use crate::{atoms, common::ExFormat, error::ExError, state::State};
+use crate::{common::ExFormat, error::ExError, state::State};
 
 #[nif]
 fn add_policy(
@@ -12,38 +12,17 @@ fn add_policy(
     let id = id.map_or(None, |v| Some(PolicyId::new(v)));
 
     let p = match policy {
-        ExFormat::Cedar(value) => Policy::parse(id, value).map_err(|e| {
-            Error::Term(Box::new(ExError {
-                source: atoms::policy(),
-                reason: e.to_string(),
-            }))
-        }),
+        ExFormat::Cedar(value) => Policy::parse(id, value).map_err(|e| ExError::from(e).into()),
         ExFormat::Json(value) => {
-            let json = serde_json::from_str(value).map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::json(),
-                    reason: e.to_string(),
-                }))
-            })?;
-
-            Policy::from_json(id, json).map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::json(),
-                    reason: e.to_string(),
-                }))
-            })
+            let json = serde_json::from_str(value).map_err(|e| ExError::from(e).into())?;
+            Policy::from_json(id, json).map_err(|e| ExError::from(e).into())
         }
     }?;
 
     {
         // FIXME: Better error handling
         let mut policy_set = ctx.policy_set.write().unwrap();
-        policy_set.add(p).map_err(|e| {
-            Error::Term(Box::new(ExError {
-                source: atoms::policy(),
-                reason: e.to_string(),
-            }))
-        })?;
+        policy_set.add(p).map_err(|e| ExError::from(e).into())?;
     }
 
     Ok(ctx)

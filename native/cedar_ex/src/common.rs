@@ -1,8 +1,8 @@
 use cedar_policy::{EntityId, EntityTypeName, EntityUid, RestrictedExpression};
-use rustler::{Error, NifResult, NifStruct, NifTaggedEnum};
-use std::{fmt::Display, str::FromStr};
+use rustler::{NifResult, NifStruct, NifTaggedEnum};
+use std::str::FromStr;
 
-use crate::{atoms, entity::ExEntity, error::ExError};
+use crate::{entity::ExEntity, error::ExError};
 
 pub(crate) type RecordItems = Vec<(String, RestrictedExpression)>;
 
@@ -51,12 +51,7 @@ pub(crate) struct ExEntityUid {
 impl Into<NifResult<EntityUid>> for ExEntityUid {
     fn into(self) -> NifResult<EntityUid> {
         Ok(EntityUid::from_type_name_and_id(
-            EntityTypeName::from_str(&self.type_name).map_err(|errors| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::entity_uid(),
-                    reason: join_errors(errors.iter()),
-                }))
-            })?,
+            EntityTypeName::from_str(&self.type_name).map_err(|e| ExError::from(e).into())?,
             EntityId::from_str(&self.id).unwrap(),
         ))
     }
@@ -102,26 +97,9 @@ impl Into<NifResult<RestrictedExpression>> for ExRestrictedExpression {
             }
             ExRestrictedExpression::Record(r) => {
                 let values: NifResult<RecordItems> = ExRecordItems(r).into();
-                Ok(RestrictedExpression::new_record(values?).map_err(|error| {
-                    Error::Term(Box::new(ExError {
-                        source: atoms::restricted_expression(),
-                        reason: error.to_string(),
-                    }))
-                })?)
+                Ok(RestrictedExpression::new_record(values?)
+                    .map_err(|e| ExError::from(e).into())?)
             }
         }
     }
-}
-
-pub(crate) fn join_errors<T>(value: T) -> String
-where
-    T: Iterator,
-    T::Item: Display,
-{
-    value.fold(String::new(), |mut a, v| {
-        if a.len() > 0 {
-            a.push(' ');
-        }
-        a + &v.to_string()
-    })
 }

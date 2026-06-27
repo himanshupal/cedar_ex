@@ -1,14 +1,14 @@
 use cedar_policy::{Context, EntityUid, Request};
-use rustler::{Error, NifResult, ResourceArc, nif};
+use rustler::{NifResult, ResourceArc, nif};
 
 use crate::{
-    atoms,
     common::{ExEntityUid, ExFormat, ExRecordItem, ExRecordItems, RecordItems},
     error::ExError,
     schema::parse_schema,
     state::State,
 };
 
+// TODO: Improve the response
 #[nif(name = "verify?")]
 fn verify(
     ctx: ResourceArc<State>,
@@ -24,21 +24,11 @@ fn verify(
     let r: NifResult<EntityUid> = r.into();
 
     let cx: NifResult<RecordItems> = ExRecordItems(c).into();
-    let c = Context::from_pairs(cx?).map_err(|e| {
-        Error::Term(Box::new(ExError {
-            source: atoms::context(),
-            reason: e.to_string(),
-        }))
-    });
+    let c = Context::from_pairs(cx?).map_err(|e| ExError::from(e).into());
 
     let s = parse_schema(s)?;
 
-    let rq = Request::new(p?, a?, r?, c?, s.as_ref()).map_err(|e| {
-        Error::Term(Box::new(ExError {
-            source: atoms::request(),
-            reason: e.to_string(),
-        }))
-    })?;
+    let rq = Request::new(p?, a?, r?, c?, s.as_ref()).map_err(|e| ExError::from(e).into())?;
 
     let authorizer = &*ctx.authorizer.read().unwrap();
     let response = authorizer.is_authorized(
@@ -52,10 +42,7 @@ fn verify(
 
     for error in diagnostics.errors() {
         eprintln!("VERIFICATION_ERROR: {}", error);
-        return Err(Error::Term(Box::new(ExError {
-            source: atoms::request(),
-            reason: error.to_string(),
-        })));
+        return Err(ExError::from(error.to_owned()).into());
     }
 
     for reason in diagnostics.reason() {

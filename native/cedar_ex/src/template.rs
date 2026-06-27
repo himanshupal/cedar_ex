@@ -1,10 +1,8 @@
+use cedar_policy::{EntityUid, PolicyId, SlotId, Template};
+use rustler::{NifResult, NifUnitEnum, ResourceArc, nif};
 use std::collections::HashMap;
 
-use cedar_policy::{EntityUid, PolicyId, SlotId, Template};
-use rustler::{Error, NifResult, NifUnitEnum, ResourceArc, nif};
-
 use crate::{
-    atoms,
     common::{ExEntityUid, ExFormat},
     error::ExError,
     state::State,
@@ -25,38 +23,20 @@ pub(crate) fn add_template(
     let id = id.map_or(None, |v| Some(PolicyId::new(v)));
 
     let t = match template {
-        ExFormat::Cedar(value) => Template::parse(id, value).map_err(|e| {
-            Error::Term(Box::new(ExError {
-                source: atoms::template(),
-                reason: e.to_string(),
-            }))
-        }),
+        ExFormat::Cedar(value) => Template::parse(id, value).map_err(|e| ExError::from(e).into()),
         ExFormat::Json(value) => {
-            let json = serde_json::from_str(value).map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::json(),
-                    reason: e.to_string(),
-                }))
-            })?;
+            let json = serde_json::from_str(value).map_err(|e| ExError::from(e).into())?;
 
-            Template::from_json(id, json).map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::template(),
-                    reason: e.to_string(),
-                }))
-            })
+            Template::from_json(id, json).map_err(|e| ExError::from(e).into())
         }
     }?;
 
     {
         // FIXME: Better error handling
         let mut policy_set = ctx.policy_set.write().unwrap();
-        policy_set.add_template(t).map_err(|e| {
-            Error::Term(Box::new(ExError {
-                source: atoms::template(),
-                reason: e.to_string(),
-            }))
-        })?;
+        policy_set
+            .add_template(t)
+            .map_err(|e| ExError::from(e).into())?;
     }
 
     Ok(ctx)
@@ -84,12 +64,7 @@ pub(crate) fn link(
         let mut policy_set = ctx.policy_set.write().unwrap();
         policy_set
             .link(PolicyId::new(template_id), PolicyId::new(policy_id), v)
-            .map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::template(),
-                    reason: e.to_string(),
-                }))
-            })?;
+            .map_err(|e| ExError::from(e).into())?;
     }
 
     Ok(ctx)

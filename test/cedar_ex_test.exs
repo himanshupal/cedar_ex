@@ -78,7 +78,7 @@ defmodule CedarPolicyTest do
       |> CedarPolicy.add_template(template0, "template0")
       |> CedarPolicy.add_entities([pb, pa, ab, rb], schema)
       |> CedarPolicy.link("template0", "policy1", %{principal: p1, resource: r})
-      |> CedarPolicy.validate(schema)
+      |> CedarPolicy.validate(schema, true)
 
     ns =
       ~s({"":{"commonTypes":{"ContextType":{"type":"Record","attributes":{"boolean":{"type":"Bool","required":true}}}},"entityTypes":{"User":{"shape":{"type":"Record","attributes":{"age":{"type":"Long"}}}},"Album":{"shape":{"type":"Record","attributes":{}}}},"actions":{"view":{"appliesTo":{"principalTypes":["User"],"resourceTypes":["Album"],"context":{"type":"ContextType"}}}}}})

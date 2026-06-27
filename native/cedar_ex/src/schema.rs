@@ -1,7 +1,7 @@
 use cedar_policy::{Schema, ValidationMode, Validator};
-use rustler::{Error, NifResult, ResourceArc, nif};
+use rustler::{NifResult, ResourceArc, nif};
 
-use crate::{atoms, common::ExFormat, error::ExError, state::State};
+use crate::{common::ExFormat, error::ExError, state::State};
 
 #[nif]
 pub(crate) fn validate(
@@ -11,26 +11,24 @@ pub(crate) fn validate(
 ) -> NifResult<ResourceArc<State>> {
     let s = parse_schema(Some(schema))?.unwrap();
 
+    let validation_mode = if strict {
+        ValidationMode::Strict
+    } else {
+        ValidationMode::default()
+    };
+
     {
         // FIXME: Better error handling
         let policy_set = ctx.policy_set.read().unwrap();
-        let result = Validator::new(s).validate(&policy_set, ValidationMode::default());
+        let result = Validator::new(s).validate(&policy_set, validation_mode);
 
         for error in result.validation_errors() {
-            return Err(Error::Term(Box::new(ExError {
-                source: atoms::schema(),
-                reason: error.to_string(),
-            })));
+            return Err(ExError::from(error.to_owned()).into());
         }
 
         for warning in result.validation_warnings() {
             println!("VALIDATION_WARNING: {}", warning);
-            if strict {
-                return Err(Error::Term(Box::new(ExError {
-                    source: atoms::schema(),
-                    reason: warning.to_string(),
-                })));
-            }
+            // TODO: Improve return type to handle warnings
         }
     }
 
@@ -40,24 +38,15 @@ pub(crate) fn validate(
 pub(crate) fn parse_schema(schema: Option<ExFormat>) -> NifResult<Option<Schema>> {
     schema.map_or(Ok(None), |v| match v {
         ExFormat::Cedar(value) => {
-            let (s, warnings) = Schema::from_cedarschema_str(value).map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::schema(),
-                    reason: e.to_string(),
-                }))
-            })?;
+            let (s, warnings) =
+                Schema::from_cedarschema_str(value).map_err(|e| ExError::from(e).into())?;
             for warning in warnings {
                 println!("SCHEMA_WARNING: {}", warning);
             }
             Ok(Some(s))
         }
         ExFormat::Json(value) => {
-            let s = Schema::from_json_str(value).map_err(|e| {
-                Error::Term(Box::new(ExError {
-                    source: atoms::schema(),
-                    reason: e.to_string(),
-                }))
-            })?;
+            let s = Schema::from_json_str(value).map_err(|e| ExError::from(e).into())?;
             Ok(Some(s))
         }
     })

@@ -1,8 +1,6 @@
 use cedar_policy::{Authorizer, Entities, PolicySet};
-use rustler::{Env, Resource, ResourceArc, Term, nif};
+use rustler::{Env, Resource, ResourceArc, Term, nif, types::atom};
 use std::sync::RwLock;
-
-use crate::atoms;
 
 pub(crate) struct State {
     pub(crate) entities: RwLock<Entities>,
@@ -14,7 +12,7 @@ impl Resource for State {
     const IMPLEMENTS_DESTRUCTOR: bool = false;
 
     fn destructor(self, _: Env<'_>) {
-        println!("Dropping context resource... {:?}", atoms::ok())
+        println!("Dropping context resource... {:?}", atom::ok())
     }
 }
 
