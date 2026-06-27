@@ -9,7 +9,7 @@ use crate::{
     state::State,
 };
 
-#[nif]
+#[nif(name = "verify?")]
 fn verify(
     ctx: ResourceArc<State>,
     p: ExEntityUid,

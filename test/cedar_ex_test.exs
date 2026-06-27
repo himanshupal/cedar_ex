@@ -111,7 +111,7 @@ defmodule CedarPolicyTest do
         ip: "10.50.0.0/24"
       )
 
-    assert CedarPolicy.verify(v1, p0, a, r, c, schema) == false
-    assert CedarPolicy.verify(v1, p1, a, r, c, schema) == true
+    assert CedarPolicy.verify?(v1, p0, a, r, c, schema) == false
+    assert CedarPolicy.verify?(v1, p1, a, r, c, schema) == true
   end
 end
