@@ -25,7 +25,7 @@ pub(crate) struct ExEntity {
 
 #[nif]
 pub(crate) fn add_entities(
-    ctx: ResourceArc<State>,
+    state: ResourceArc<State>,
     entities: ExEntityFormat,
     schema: Option<ExFormat>,
 ) -> NifResult<ResourceArc<State>> {
@@ -56,15 +56,15 @@ pub(crate) fn add_entities(
     }?;
 
     {
-        let mut entities = ctx.entities.write().unwrap();
-
-        let current = entities.clone();
-        // FIXME: Better error handling
-
-        *entities = current
+        let mut entities = state
+            .entities
+            .write()
+            .map_err(|e| ExError::from(e).into())?;
+        *entities = entities
+            .clone()
             .add_entities(e, s.as_ref())
             .map_err(|e| ExError::from(e).into())?;
     }
 
-    Ok(ctx)
+    Ok(state)
 }

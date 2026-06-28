@@ -1,23 +1,63 @@
 use cedar_policy::{
-    AuthorizationError, CedarSchemaError, ContextCreationError, EntityAttrEvaluationError,
-    EvaluationError, ExpressionConstructionError, ParseErrors, PolicyFromJsonError, PolicySetError,
-    RequestValidationError, SchemaError, ValidationError, entities_errors::EntitiesError,
+    CedarSchemaError, ContextCreationError, Entities, EntityAttrEvaluationError, EvaluationError,
+    ExpressionConstructionError, ParseErrors, PolicyFromJsonError, PolicySet, PolicySetError,
+    RequestValidationError, SchemaError, entities_errors::EntitiesError,
 };
-use rustler::{Atom, Error, NifStruct};
-use std::{error::Error as Err, fmt::Display};
+use rustler::{Atom, Error as NifError, NifStruct, types::atom};
+use std::{
+    error::Error,
+    fmt::Display,
+    sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard},
+};
 
 use crate::atoms;
 
 #[derive(NifStruct, Debug)]
 #[module = "CedarPolicy.Error"]
 pub(crate) struct ExError {
-    pub(crate) reason: String,
-    pub(crate) source: Atom,
+    source: Atom,
+    reason: String,
 }
 
-impl Into<Error> for ExError {
-    fn into(self) -> Error {
-        Error::Term(Box::new(self))
+impl Into<NifError> for ExError {
+    fn into(self) -> NifError {
+        NifError::Term(Box::new(self))
+    }
+}
+
+impl From<PoisonError<RwLockReadGuard<'_, PolicySet>>> for ExError {
+    fn from(e: PoisonError<RwLockReadGuard<'_, PolicySet>>) -> ExError {
+        ExError {
+            source: atom::nif_panicked(),
+            reason: e.to_string(),
+        }
+    }
+}
+
+impl From<PoisonError<RwLockReadGuard<'_, Entities>>> for ExError {
+    fn from(e: PoisonError<RwLockReadGuard<'_, Entities>>) -> ExError {
+        ExError {
+            source: atom::nif_panicked(),
+            reason: e.to_string(),
+        }
+    }
+}
+
+impl From<PoisonError<RwLockWriteGuard<'_, PolicySet>>> for ExError {
+    fn from(e: PoisonError<RwLockWriteGuard<'_, PolicySet>>) -> ExError {
+        ExError {
+            source: atom::nif_panicked(),
+            reason: e.to_string(),
+        }
+    }
+}
+
+impl From<PoisonError<RwLockWriteGuard<'_, Entities>>> for ExError {
+    fn from(e: PoisonError<RwLockWriteGuard<'_, Entities>>) -> ExError {
+        ExError {
+            source: atom::nif_panicked(),
+            reason: e.to_string(),
+        }
     }
 }
 
@@ -348,104 +388,6 @@ impl From<RequestValidationError> for ExError {
     }
 }
 
-impl From<ValidationError> for ExError {
-    fn from(e: ValidationError) -> Self {
-        match e {
-            ValidationError::UnrecognizedEntityType(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("UnrecognizedEntityType: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::UnrecognizedActionId(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("UnrecognizedActionId: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::InvalidActionApplication(e) => ExError {
-                source: atoms::schema(),
-                reason: format!(
-                    "InvalidActionApplication: {}",
-                    e.source().ok_or(&e).unwrap()
-                ),
-            },
-            ValidationError::UnexpectedType(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("UnexpectedType: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::IncompatibleTypes(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("IncompatibleTypes: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::UnsafeAttributeAccess(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("UnsafeAttributeAccess: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::UnsafeOptionalAttributeAccess(e) => ExError {
-                source: atoms::schema(),
-                reason: format!(
-                    "UnsafeOptionalAttributeAccess: {}",
-                    e.source().ok_or(&e).unwrap()
-                ),
-            },
-            ValidationError::UnsafeTagAccess(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("UnsafeTagAccess: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::NoTagsAllowed(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("NoTagsAllowed: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::UndefinedFunction(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("UndefinedFunction: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::WrongNumberArguments(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("WrongNumberArguments: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::FunctionArgumentValidation(e) => ExError {
-                source: atoms::schema(),
-                reason: format!(
-                    "FunctionArgumentValidation: {}",
-                    e.source().ok_or(&e).unwrap()
-                ),
-            },
-            ValidationError::EmptySetForbidden(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("EmptySetForbidden: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::NonLitExtConstructor(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("NonLitExtConstructor: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::HierarchyNotRespected(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("HierarchyNotRespected: {}", e.source().ok_or(&e).unwrap()),
-            },
-            ValidationError::InternalInvariantViolation(e) => ExError {
-                source: atoms::schema(),
-                reason: format!(
-                    "InternalInvariantViolation: {}",
-                    e.source().ok_or(&e).unwrap()
-                ),
-            },
-            ValidationError::EntityDerefLevelViolation(e) => ExError {
-                source: atoms::schema(),
-                reason: format!(
-                    "EntityDerefLevelViolation: {}",
-                    e.source().ok_or(&e).unwrap()
-                ),
-            },
-            ValidationError::InvalidEnumEntity(e) => ExError {
-                source: atoms::schema(),
-                reason: format!("InvalidEnumEntity: {}", e.source().ok_or(&e).unwrap()),
-            },
-            _ => ExError {
-                source: atoms::schema(),
-                reason: format!("ValidationError: {}", e.source().ok_or(&e).unwrap()),
-            },
-        }
-    }
-}
-
 impl From<ParseErrors> for ExError {
     fn from(e: ParseErrors) -> Self {
         ExError {
@@ -453,7 +395,7 @@ impl From<ParseErrors> for ExError {
             reason: format!(
                 "ParseErrors: {}, {}",
                 join_errors(e.iter()),
-                e.source().ok_or(&e).unwrap()
+                e.source().unwrap_or(&e)
             ),
         }
     }
@@ -475,15 +417,6 @@ impl From<ExpressionConstructionError> for ExError {
                 source: atoms::restricted_expression(),
                 reason: format!("DuplicateKey: {}", e),
             },
-        }
-    }
-}
-
-impl From<AuthorizationError> for ExError {
-    fn from(e: AuthorizationError) -> Self {
-        ExError {
-            source: atoms::request(),
-            reason: format!("AuthorizationError: {}", e.source().ok_or(&e).unwrap()),
         }
     }
 }

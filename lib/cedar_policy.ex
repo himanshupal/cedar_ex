@@ -3,11 +3,13 @@ defmodule CedarPolicy do
   Documentation for `CedarPolicy`.
   """
 
+  alias CedarPolicy.AuthorizationResult
   alias CedarPolicy.Entity
   alias CedarPolicy.EntityUid
   alias CedarPolicy.Error
   alias CedarPolicy.Native
   alias CedarPolicy.Record
+  alias CedarPolicy.SchemaValidationResult
   alias CedarPolicy.TemplateParams
 
   @type entities :: list(Entity.t()) | {:list, list(Entity.t())} | {:json, String.t()}
@@ -22,9 +24,9 @@ defmodule CedarPolicy do
   @spec add_policy(store :: reference(), policy :: policy(), id :: String.t() | nil) :: reference() | {:error, Error.t()}
   @spec add_entities(store :: reference(), entities :: entities(), schema :: schema() | nil) :: reference() | {:error, Error.t()}
   @spec link(store :: reference(), template_id :: String.t(), policy_id :: String.t(), values :: TemplateParams.t()) :: reference() | {:error, Error.t()}
-  @spec validate(store :: reference(), schema :: schema(), strict :: boolean() | nil) :: reference() | {:error, Error.t()}
-  @spec verify?(store :: reference(), principal :: EntityUid.t(), action :: EntityUid.t(), resource :: EntityUid.t(), context :: Record.t() | nil, schema :: schema() | nil) ::
-          boolean() | {:error, Error.t()}
+  @spec validate_schema(store :: reference(), schema :: schema(), strict :: boolean() | nil) :: {:error, Error.t()} | SchemaValidationResult.t()
+  @spec is_authorized(store :: reference(), principal :: EntityUid.t(), action :: EntityUid.t(), resource :: EntityUid.t(), context :: Record.t() | nil, schema :: schema() | nil) ::
+          AuthorizationResult.t() | {:error, Error.t()}
 
   @doc """
   Get the Cedar SDK Semantic Versioning version
@@ -86,20 +88,20 @@ defmodule CedarPolicy do
   @doc """
   Validates the added policies against schema
   """
-  def validate(store, schema, strict \\ false)
+  def validate_schema(store, schema, strict \\ false)
 
-  def validate(store, schema, strict) when is_reference(store) and is_boolean(strict) do
-    Native.validate(store, to_tuple(schema), strict)
+  def validate_schema(store, schema, strict) when is_reference(store) and is_boolean(strict) do
+    Native.validate_schema(store, to_tuple(schema), strict)
   end
 
   @doc """
   Verify the access of principal for action on resource given context & optionally an schema
   """
-  def verify?(store, principal, action, resource, context \\ [], schema \\ nil)
+  def is_authorized(store, principal, action, resource, context \\ [], schema \\ nil)
 
-  def verify?(store, principal, action, resource, context, schema)
+  def is_authorized(store, principal, action, resource, context, schema)
       when is_reference(store) and is_struct(principal, EntityUid) and is_struct(action, EntityUid) and is_struct(resource, EntityUid) and is_list(context) do
-    Native.verify?(store, principal, action, resource, context, to_tuple(schema))
+    Native.is_authorized(store, principal, action, resource, context, to_tuple(schema))
   end
 
   defp to_tuple(data) when is_nil(data), do: nil

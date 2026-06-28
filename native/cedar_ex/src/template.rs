@@ -16,7 +16,7 @@ pub(crate) enum ExSlotId {
 
 #[nif]
 pub(crate) fn add_template(
-    ctx: ResourceArc<State>,
+    state: ResourceArc<State>,
     template: ExFormat,
     id: Option<&str>,
 ) -> NifResult<ResourceArc<State>> {
@@ -26,25 +26,26 @@ pub(crate) fn add_template(
         ExFormat::Cedar(value) => Template::parse(id, value).map_err(|e| ExError::from(e).into()),
         ExFormat::Json(value) => {
             let json = serde_json::from_str(value).map_err(|e| ExError::from(e).into())?;
-
             Template::from_json(id, json).map_err(|e| ExError::from(e).into())
         }
     }?;
 
     {
-        // FIXME: Better error handling
-        let mut policy_set = ctx.policy_set.write().unwrap();
+        let mut policy_set = state
+            .policy_set
+            .write()
+            .map_err(|e| ExError::from(e).into())?;
         policy_set
             .add_template(t)
             .map_err(|e| ExError::from(e).into())?;
     }
 
-    Ok(ctx)
+    Ok(state)
 }
 
 #[nif]
 pub(crate) fn link(
-    ctx: ResourceArc<State>,
+    state: ResourceArc<State>,
     template_id: &str,
     policy_id: &str,
     values: HashMap<ExSlotId, ExEntityUid>,
@@ -60,12 +61,14 @@ pub(crate) fn link(
     })?;
 
     {
-        // FIXME: Better error handling
-        let mut policy_set = ctx.policy_set.write().unwrap();
+        let mut policy_set = state
+            .policy_set
+            .write()
+            .map_err(|e| ExError::from(e).into())?;
         policy_set
             .link(PolicyId::new(template_id), PolicyId::new(policy_id), v)
             .map_err(|e| ExError::from(e).into())?;
     }
 
-    Ok(ctx)
+    Ok(state)
 }

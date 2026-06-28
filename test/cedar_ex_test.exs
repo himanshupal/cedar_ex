@@ -75,10 +75,12 @@ defmodule CedarPolicyTest do
     v1 =
       CedarPolicy.new()
       |> CedarPolicy.add_policy(policy0, "policy0")
-      |> CedarPolicy.add_template(template0, "template0")
       |> CedarPolicy.add_entities([pb, pa, ab, rb], schema)
+      |> CedarPolicy.add_template(template0, "template0")
       |> CedarPolicy.link("template0", "policy1", %{principal: p1, resource: r})
-      |> CedarPolicy.validate(schema, true)
+
+    v1
+    |> CedarPolicy.validate_schema(schema, true)
 
     ns =
       ~s({"":{"commonTypes":{"ContextType":{"type":"Record","attributes":{"boolean":{"type":"Bool","required":true}}}},"entityTypes":{"User":{"shape":{"type":"Record","attributes":{"age":{"type":"Long"}}}},"Album":{"shape":{"type":"Record","attributes":{}}}},"actions":{"view":{"appliesTo":{"principalTypes":["User"],"resourceTypes":["Album"],"context":{"type":"ContextType"}}}}}})
@@ -92,7 +94,7 @@ defmodule CedarPolicyTest do
     CedarPolicy.new()
     |> CedarPolicy.add_policy({:json, np}, "policyJ")
     |> CedarPolicy.add_entities({:json, ne}, {:json, ns})
-    |> CedarPolicy.validate({:json, ns})
+    |> CedarPolicy.validate_schema({:json, ns})
 
     c =
       Record.new(
@@ -111,7 +113,10 @@ defmodule CedarPolicyTest do
         ip: "10.50.0.0/24"
       )
 
-    assert CedarPolicy.verify?(v1, p0, a, r, c, schema) == false
-    assert CedarPolicy.verify?(v1, p1, a, r, c, schema) == true
+    r1 = CedarPolicy.is_authorized(v1, p0, a, r, c, schema)
+    r2 = CedarPolicy.is_authorized(v1, p1, a, r, c, schema)
+
+    assert r1.authorized == false
+    assert r2.authorized == true
   end
 end

@@ -67,6 +67,7 @@ pub(crate) enum ExRestrictedExpression {
     DateTime(String),
     Duration(String),
     Entity(ExEntity),
+    EntityUid(ExEntityUid),
     Record(Vec<ExRecordItem>),
     Set(Vec<ExRestrictedExpression>),
 }
@@ -93,6 +94,10 @@ impl Into<NifResult<RestrictedExpression>> for ExRestrictedExpression {
             )),
             ExRestrictedExpression::Entity(value) => {
                 let entity_uid: NifResult<EntityUid> = value.id.into();
+                Ok(RestrictedExpression::new_entity_uid(entity_uid?))
+            }
+            ExRestrictedExpression::EntityUid(value) => {
+                let entity_uid: NifResult<EntityUid> = value.into();
                 Ok(RestrictedExpression::new_entity_uid(entity_uid?))
             }
             ExRestrictedExpression::Record(r) => {

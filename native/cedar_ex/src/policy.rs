@@ -5,7 +5,7 @@ use crate::{common::ExFormat, error::ExError, state::State};
 
 #[nif]
 fn add_policy(
-    ctx: ResourceArc<State>,
+    state: ResourceArc<State>,
     policy: ExFormat,
     id: Option<&str>,
 ) -> NifResult<ResourceArc<State>> {
@@ -20,10 +20,12 @@ fn add_policy(
     }?;
 
     {
-        // FIXME: Better error handling
-        let mut policy_set = ctx.policy_set.write().unwrap();
+        let mut policy_set = state
+            .policy_set
+            .write()
+            .map_err(|e| ExError::from(e).into())?;
         policy_set.add(p).map_err(|e| ExError::from(e).into())?;
     }
 
-    Ok(ctx)
+    Ok(state)
 }

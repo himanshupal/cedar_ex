@@ -17,9 +17,9 @@ defmodule CedarPolicy.Native do
 
   def add_entities(_store, _entities, _schema \\ nil), do: not_loaded()
 
-  def validate(_store, _schema, _strict \\ nil), do: not_loaded()
+  def validate_schema(_store, _schema, _strict \\ nil), do: not_loaded()
 
-  def verify?(_store, _principal, _action, _resource, _context, _schema \\ nil), do: not_loaded()
+  def is_authorized(_store, _principal, _action, _resource, _context, _schema \\ nil), do: not_loaded()
 
   defp not_loaded, do: :erlang.nif_error(:nif_not_loaded)
 end

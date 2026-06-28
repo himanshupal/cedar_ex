@@ -1,5 +1,5 @@
-use cedar_policy::{Context, EntityUid, Request};
-use rustler::{NifResult, ResourceArc, nif};
+use cedar_policy::{Authorizer, Context, EntityUid, Request};
+use rustler::{NifResult, NifStruct, ResourceArc, nif};
 
 use crate::{
     common::{ExEntityUid, ExFormat, ExRecordItem, ExRecordItems, RecordItems},
@@ -8,49 +8,47 @@ use crate::{
     state::State,
 };
 
-// TODO: Improve the response
-#[nif(name = "verify?")]
-fn verify(
-    ctx: ResourceArc<State>,
-    p: ExEntityUid,
-    a: ExEntityUid,
-    r: ExEntityUid,
-    // TODO: Support other types for RE & schema
-    c: Vec<ExRecordItem>,
-    s: Option<ExFormat>,
-) -> NifResult<bool> {
-    let p: NifResult<EntityUid> = p.into();
-    let a: NifResult<EntityUid> = a.into();
-    let r: NifResult<EntityUid> = r.into();
+#[derive(NifStruct, Debug)]
+#[module = "CedarPolicy.AuthorizationResult"]
+struct AuthorizationResult {
+    authorized: bool,
+    errors: Vec<String>,
+    reasons: Vec<String>,
+}
 
-    let cx: NifResult<RecordItems> = ExRecordItems(c).into();
+#[nif(name = "is_authorized")]
+fn is_authorized(
+    state: ResourceArc<State>,
+    principal: ExEntityUid,
+    action: ExEntityUid,
+    resource: ExEntityUid,
+    context: Vec<ExRecordItem>,
+    schema: Option<ExFormat>,
+) -> NifResult<AuthorizationResult> {
+    let p: NifResult<EntityUid> = principal.into();
+    let a: NifResult<EntityUid> = action.into();
+    let r: NifResult<EntityUid> = resource.into();
+
+    let s = parse_schema(schema)?;
+    let cx: NifResult<RecordItems> = ExRecordItems(context).into();
     let c = Context::from_pairs(cx?).map_err(|e| ExError::from(e).into());
-
-    let s = parse_schema(s)?;
-
     let rq = Request::new(p?, a?, r?, c?, s.as_ref()).map_err(|e| ExError::from(e).into())?;
 
-    let authorizer = &*ctx.authorizer.read().unwrap();
+    let authorizer = Authorizer::new();
     let response = authorizer.is_authorized(
         &rq,
-        // FIXME: Better error handling
-        &*ctx.policy_set.read().unwrap(),
-        &*ctx.entities.read().unwrap(),
+        &*state
+            .policy_set
+            .read()
+            .map_err(|e| ExError::from(e).into())?,
+        &*state.entities.read().map_err(|e| ExError::from(e).into())?,
     );
 
     let diagnostics = response.diagnostics();
 
-    for error in diagnostics.errors() {
-        eprintln!("VERIFICATION_ERROR: {}", error);
-        return Err(ExError::from(error.to_owned()).into());
-    }
-
-    for reason in diagnostics.reason() {
-        println!("Reason: {:?}", reason);
-    }
-
-    match response.decision() {
-        cedar_policy::Decision::Allow => Ok(true),
-        cedar_policy::Decision::Deny => Ok(false),
-    }
+    Ok(AuthorizationResult {
+        authorized: matches!(response.decision(), cedar_policy::Decision::Allow),
+        errors: diagnostics.errors().map(|e| e.to_string()).collect(),
+        reasons: diagnostics.reason().map(|r| r.to_string()).collect(),
+    })
 }
