@@ -25,18 +25,11 @@ fn is_authorized(
     context: Vec<ExRecordItem>,
     schema: Option<ExFormat>,
 ) -> NifResult<AuthorizationResult> {
-    let p: NifResult<EntityUid> = principal.into();
-    let a: NifResult<EntityUid> = action.into();
-    let r: NifResult<EntityUid> = resource.into();
-
-    let s = parse_schema(schema)?;
-    let cx: NifResult<RecordItems> = ExRecordItems(context).into();
-    let c = Context::from_pairs(cx?).map_err(|e| ExError::from(e).into());
-    let rq = Request::new(p?, a?, r?, c?, s.as_ref()).map_err(|e| ExError::from(e).into())?;
+    let request = prepare_request(principal, action, resource, context, schema)?;
 
     let authorizer = Authorizer::new();
     let response = authorizer.is_authorized(
-        &rq,
+        &request,
         &*state
             .policy_set
             .read()
@@ -51,4 +44,21 @@ fn is_authorized(
         errors: diagnostics.errors().map(|e| e.to_string()).collect(),
         reasons: diagnostics.reason().map(|r| r.to_string()).collect(),
     })
+}
+
+fn prepare_request(
+    principal: ExEntityUid,
+    action: ExEntityUid,
+    resource: ExEntityUid,
+    context: Vec<ExRecordItem>,
+    schema: Option<ExFormat>,
+) -> NifResult<Request> {
+    let p: NifResult<EntityUid> = principal.into();
+    let a: NifResult<EntityUid> = action.into();
+    let r: NifResult<EntityUid> = resource.into();
+
+    let s = parse_schema(schema)?;
+    let cx: NifResult<RecordItems> = ExRecordItems(context).into();
+    let c = Context::from_pairs(cx?).map_err(|e| ExError::from(e).into());
+    Request::new(p?, a?, r?, c?, s.as_ref()).map_err(|e| ExError::from(e).into())
 }
