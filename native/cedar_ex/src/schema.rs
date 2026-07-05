@@ -4,7 +4,7 @@ use std::error::Error;
 
 use crate::{common::ExFormat, error::ExError, state::State};
 
-#[derive(NifStruct, Debug)]
+#[derive(NifStruct)]
 #[module = "CedarPolicy.SchemaValidationResult"]
 struct SchemaValidationResult {
     passed: bool,

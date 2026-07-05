@@ -8,7 +8,7 @@ use crate::{
     state::State,
 };
 
-#[derive(NifUnitEnum, PartialEq, Eq, Hash, Debug)]
+#[derive(NifUnitEnum, PartialEq, Eq, Hash)]
 pub(crate) enum ExSlotId {
     Principal,
     Resource,

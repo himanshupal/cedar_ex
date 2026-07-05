@@ -2,9 +2,9 @@ defmodule CedarPolicyTest do
   use ExUnit.Case
   doctest CedarPolicy
 
+  alias CedarPolicy.Entity
   alias CedarPolicy.EntityTypeName
   alias CedarPolicy.EntityUid
-  alias CedarPolicy.Entity
   alias CedarPolicy.Record
 
   test "Works!" do
@@ -26,6 +26,28 @@ defmodule CedarPolicyTest do
       resource == ?resource
     ) when { principal.age >= 18 && context.boolean };
     """
+
+    templateJSON_0 =
+      ~s({"effect":"permit","principal":{"op":"==","slot":"?principal"},"action":{"op":"==","entity":{"type":"Action","id":"view"}},"resource":{"op":"==","slot":"?resource"},"conditions":[{"kind":"when","body":{"&&":{"left":{">=":{"left":{".":{"left":{"Var":"principal"},"attr":"age"}},"right":{"Value":18}}},"right":{".":{"left":{"Var":"context"},"attr":"boolean"}}}}}]})
+
+    templateJSON_1 =
+      JSON.encode!(%{
+        "effect" => "permit",
+        "principal" => %{"op" => "==", "slot" => "?principal"},
+        "action" => %{"op" => "==", "entity" => %{"type" => "Action", "id" => "view"}},
+        "resource" => %{"op" => "==", "slot" => "?resource"},
+        "conditions" => [
+          %{
+            "kind" => "when",
+            "body" => %{
+              "&&" => %{
+                "left" => %{"<=" => %{"left" => %{"." => %{"left" => %{"Var" => "principal"}, "attr" => "age"}}, "right" => %{"Value" => 18}}},
+                "right" => %{"." => %{"left" => %{"Var" => "context"}, "attr" => "boolean"}}
+              }
+            }
+          }
+        ]
+      })
 
     schema = """
         type UserId = {
@@ -77,6 +99,8 @@ defmodule CedarPolicyTest do
       |> CedarPolicy.add_policy(policy0, "policy0")
       |> CedarPolicy.add_entities([pb, pa, ab, rb], schema)
       |> CedarPolicy.add_template(template0, "template0")
+      |> CedarPolicy.add_template({:json, templateJSON_0}, "templateJSON_0")
+      |> CedarPolicy.add_template({:json, templateJSON_1}, "templateJSON_1")
       |> CedarPolicy.link("template0", "policy1", %{principal: p1, resource: r})
 
     v1

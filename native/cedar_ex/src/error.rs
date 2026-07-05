@@ -12,7 +12,7 @@ use std::{
 
 use crate::atoms;
 
-#[derive(NifStruct, Debug)]
+#[derive(NifStruct)]
 #[module = "CedarPolicy.Error"]
 pub(crate) struct ExError {
     source: Atom,
@@ -405,7 +405,7 @@ impl From<PolicyFromJsonError> for ExError {
     fn from(e: PolicyFromJsonError) -> Self {
         ExError {
             source: atoms::json(),
-            reason: format!("PolicyFromJsonError: {}", e),
+            reason: format!("PolicyFromJsonError: {}", e.source().unwrap_or(&e)),
         }
     }
 }
@@ -415,7 +415,7 @@ impl From<ExpressionConstructionError> for ExError {
         match e {
             ExpressionConstructionError::DuplicateKey(e) => ExError {
                 source: atoms::restricted_expression(),
-                reason: format!("DuplicateKey: {}", e),
+                reason: format!("DuplicateKey: {}", e.source().unwrap_or(&e)),
             },
         }
     }
@@ -426,7 +426,7 @@ impl From<serde_json::Error> for ExError {
         ExError {
             source: atoms::json(),
             // TODO: Better handle json details
-            reason: format!("JsonParsingFailed: {}:{}", e.column(), e.line()),
+            reason: format!("JsonParsingFailed: {}:{}", e.line(), e.column()),
         }
     }
 }

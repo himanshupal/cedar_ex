@@ -1,7 +1,7 @@
 defmodule CedarPolicy.MixProject do
   use Mix.Project
 
-  @version "0.0.0-development"
+  @version "0.0.1"
 
   def project do
     [

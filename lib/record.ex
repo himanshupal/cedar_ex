@@ -1,6 +1,6 @@
 defmodule CedarPolicy.Record do
   @moduledoc """
-
+  Represents the intermediate format required by context & tags in rust cedar library which is essentially a list of key-value pairs where keys are strings and values are restricted expression.
   """
 
   alias CedarPolicy.Entity
@@ -8,6 +8,9 @@ defmodule CedarPolicy.Record do
   @datetime_regex ~r"^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?:T(?:[01]\d|2[0-3]):(?:[0-5]\d):(?:[0-5]\d)(?:\.\d{3})?(?:Z|[+-](?:[01]\d|2[0-3])(?:[0-5]\d)))?$"
   @duration_regex ~r"^(\d+d){0,1}(\d+h){0,1}(\d+m){0,1}(\d+s){0,1}(\d+ms){0,1}$"
 
+  @typedoc """
+  Representation of restricted expression from rust cedar library in Elixir.
+  """
   @type restricted_expression ::
           {:set, list(t())}
           | {:long, integer()}
@@ -22,13 +25,27 @@ defmodule CedarPolicy.Record do
 
   @type t :: list({String.t(), restricted_expression})
 
-  @type value() ::
-          atom() | integer() | float() | boolean() | String.t() | Entity.t() | DateTime.t() | t()
+  @type value() :: atom() | integer() | float() | boolean() | String.t() | Entity.t() | DateTime.t() | t()
 
+  @doc """
+  Creates a new `CedarPolicy.Record` struct from a list of key-value pairs.
+
+  ## Parameters
+    - `data`: A list of key-value pairs where keys are atoms or strings and values can be of various types including atoms, integers, floats, booleans, strings, entities, DateTime structs, or nested records.
+
+  ## Examples
+
+      iex> Record.new(name: "Alice", age: 30, active: true)
+      [{"name", {:string, "Alice"}}, {"age", {:long, 30}}, {"active", {:bool, true}}]
+
+      iex> Record.new([{"created_at", ~U[2023-01-01T00:00:00Z]}, {"duration", "1h"}])
+      [{"created_at", {:date_time, "2023-01-01T00:00:00Z"}}, {"duration", {:duration, "1h"}}]
+  """
   @spec new(
           data ::
             list({atom() | String.t(), value() | list(value())})
         ) :: t()
+
   def new(data) do
     Enum.map(data, fn {key, value} ->
       {parse_key(key), parse_value(value)}

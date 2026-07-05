@@ -8,7 +8,7 @@ use crate::{
     state::State,
 };
 
-#[derive(NifStruct, Debug)]
+#[derive(NifStruct)]
 #[module = "CedarPolicy.AuthorizationResult"]
 struct AuthorizationResult {
     authorized: bool,
@@ -28,15 +28,13 @@ fn is_authorized(
     let request = prepare_request(principal, action, resource, context, schema)?;
 
     let authorizer = Authorizer::new();
-    let response = authorizer.is_authorized(
-        &request,
-        &*state
-            .policy_set
-            .read()
-            .map_err(|e| ExError::from(e).into())?,
-        &*state.entities.read().map_err(|e| ExError::from(e).into())?,
-    );
+    let policy_set = state
+        .policy_set
+        .read()
+        .map_err(|e| ExError::from(e).into())?;
+    let entities = state.entities.read().map_err(|e| ExError::from(e).into())?;
 
+    let response = authorizer.is_authorized(&request, &policy_set, &entities);
     let diagnostics = response.diagnostics();
 
     Ok(AuthorizationResult {

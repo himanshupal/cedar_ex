@@ -8,13 +8,13 @@ use crate::{
     state::State,
 };
 
-#[derive(NifTaggedEnum, Debug)]
+#[derive(NifTaggedEnum)]
 enum ExEntityFormat<'a> {
     List(Vec<ExEntity>),
     Json(&'a str),
 }
 
-#[derive(NifStruct, Debug)]
+#[derive(NifStruct)]
 #[module = "CedarPolicy.Entity"]
 pub(crate) struct ExEntity {
     pub(crate) id: ExEntityUid,

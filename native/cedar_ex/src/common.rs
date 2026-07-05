@@ -35,13 +35,13 @@ impl Into<NifResult<RecordItems>> for ExRecordItems {
     }
 }
 
-#[derive(NifTaggedEnum, Debug)]
+#[derive(NifTaggedEnum)]
 pub(crate) enum ExFormat<'a> {
     Cedar(&'a str),
     Json(&'a str),
 }
 
-#[derive(NifStruct, Debug)]
+#[derive(NifStruct)]
 #[module = "CedarPolicy.EntityUid"]
 pub(crate) struct ExEntityUid {
     type_name: String,
@@ -57,7 +57,7 @@ impl Into<NifResult<EntityUid>> for ExEntityUid {
     }
 }
 
-#[derive(NifTaggedEnum, Debug)]
+#[derive(NifTaggedEnum)]
 pub(crate) enum ExRestrictedExpression {
     Long(i64),
     Bool(bool),
